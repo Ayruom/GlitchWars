@@ -236,7 +236,7 @@ export class PlayScene extends BaseScene {
   createHealthBars() {
     // Create player health bar container
     const healthBarX = 20;
-    const healthBarY = this.config.height - 50;
+    const healthBarY = this.config.height - 75;
     const healthBarWidth = 200;
     const healthBarHeight = 20;
     
