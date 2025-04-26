@@ -32,12 +32,23 @@ a:hover {
 /* 🖤 Body Reset */
 body {
   margin: 0;
+  padding: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100vh;
+  max-height: 100vh;
   background-color: #000;
   color: #00ffcc;
   font-family: 'Press Start 2P', cursive;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Ensure Phaser canvas doesn't create overlap issues */
+canvas {
+  position: relative !important;
+  z-index: 1;
 }
 
 /* 🎮 Headings */

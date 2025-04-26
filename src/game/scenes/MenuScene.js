@@ -14,34 +14,51 @@ export class MenuScene extends BaseScene {
   create() {
     super.create();
     
-    // Add title
-    const title = this.add.text(this.screenCenter[0], this.screenCenter[1] - 100, 'GLITCH WARS', { 
-      font: '48px "Press Start 2P"',
-      fill: '#00ff00',
-      stroke: '#000000',
-      strokeThickness: 6,
-      shadow: { offsetX: 2, offsetY: 2, color: '#0ff', blur: 8, stroke: true, fill: true }
-    }).setOrigin(0.5);
+    // Calculate responsive title size
+    const titleSize = Math.max(24, Math.min(48, this.config.width / 20));
+    const titleOffset = Math.max(50, Math.min(100, this.config.height / 8));
     
-    // Apply glitch effect to title
+    // Add title with responsive sizing
+    const title = this.add.text(
+      this.screenCenter[0], 
+      this.screenCenter[1] - titleOffset, 
+      'GLITCH WARS', 
+      { 
+        font: `${titleSize}px "Press Start 2P"`,
+        fill: '#00ff00',
+        stroke: '#000000',
+        strokeThickness: Math.max(3, titleSize / 16),
+        shadow: { 
+          offsetX: Math.max(1, titleSize / 24), 
+          offsetY: Math.max(1, titleSize / 24), 
+          color: '#0ff', 
+          blur: Math.max(4, titleSize / 12), 
+          stroke: true, 
+          fill: true 
+        }
+      }
+    ).setOrigin(0.5);
+    
+    // Apply glitch effect
     this.createGlitchEffect(title);
     
-    // Create menu items
+    // Create menu items with responsive sizing from BaseScene
     this.createMenu(this.menu, (menuItem) => {
       const textGO = menuItem.textObject;
-      textGO.setInteractive({ useHandCursor: true });
-      
-      textGO.on('pointerover', () => {
-        textGO.setStyle({ fill: '#ff00ff' });
-      });
-      
-      textGO.on('pointerout', () => {
-        textGO.setStyle({ fill: '#00ff00' });
-      });
-      
-      textGO.on('pointerup', () => {
-        this.scene.start(menuItem.scene);
-      });
+      textGO.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => {
+          textGO.setStyle({ fill: '#ff00ff' });
+          // Add hover scale effect
+          textGO.setScale(1.1);
+        })
+        .on('pointerout', () => {
+          textGO.setStyle({ fill: '#00ff00' });
+          // Reset scale
+          textGO.setScale(1);
+        })
+        .on('pointerup', () => {
+          this.scene.start(menuItem.scene);
+        });
     });
   }
 }

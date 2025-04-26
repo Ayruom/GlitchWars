@@ -20,6 +20,8 @@ export class PlayScene extends BaseScene {
     this.playerCurrentHealth = 100;
     this.playerHealthBar = null;
     this.playerHealthText = null;
+    this.maxHealthCap = 200; // Maximum possible health cap
+    this.healthIncreaseAmount = 10; // Smaller health increase per wave
     
     // Game objects
     this.enemies = null;
@@ -33,6 +35,7 @@ export class PlayScene extends BaseScene {
     this.cursors = null;
     
     // Game settings
+    this.enemyBaseHealth = 100;
     this.enemySpawnRate = 2000; // ms
     this.enemyBaseSpeed = 100;
     this.maxEnemies = 50;
@@ -43,6 +46,10 @@ export class PlayScene extends BaseScene {
     this.lastPlayerDamageTime = 0;
     this.enemyContactDamage = 5;
     this.weaponDamage = 10;
+    
+    // Score settings
+    this.baseScoreToLevel = 200; // Base score needed to level up
+    this.levelScoreMultiplier = 1.5; // Score requirement increases by 50% each level
   }
 
   /**
@@ -156,21 +163,23 @@ export class PlayScene extends BaseScene {
    * Create UI elements like score, level indicator, etc.
    */
   createUI() {
+    const baseFontSize = Math.max(12, Math.min(18, this.config.width / 50));
+    
     // Score text
     this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-      fontSize: '18px', 
+      fontSize: `${baseFontSize}px`, 
       fill: '#00ff00'
     });
     
     // Level text
-    this.levelText = this.add.text(16, 46, `Level: ${this.level}`, {
-      fontSize: '14px',
+    this.levelText = this.add.text(16, 16 + baseFontSize + 10, `Level: ${this.level}`, {
+      fontSize: `${baseFontSize}px`,
       fill: '#00ff00'
     });
     
     // Wave text
-    this.waveText = this.add.text(16, 76, `Wave: ${this.wave}`, {
-      fontSize: '14px',
+    this.waveText = this.add.text(16, 16 + (baseFontSize + 10) * 2, `Wave: ${this.wave}`, {
+      fontSize: `${baseFontSize}px`,
       fill: '#00ff00'
     });
     
@@ -180,7 +189,7 @@ export class PlayScene extends BaseScene {
       16, 
       `Hero: ${this.selectedHero.name}`, 
       {
-        fontSize: '12px',
+        fontSize: `${baseFontSize}px`,
         fill: '#00ff00'
       }
     ).setOrigin(1, 0);
@@ -190,15 +199,14 @@ export class PlayScene extends BaseScene {
    * Create health bars for player and enemies
    */
   createHealthBars() {
-    // Create player health bar container
-    const healthBarX = 20;
-    const healthBarY = this.config.height - 50;
-    const healthBarWidth = 200;
-    const healthBarHeight = 20;
+    const healthBarWidth = Math.max(150, Math.min(200, this.config.width / 6));
+    const healthBarHeight = Math.max(15, Math.min(20, this.config.height / 30));
+    const healthBarY = this.config.height - healthBarHeight - 20;
+    const baseFontSize = Math.max(12, Math.min(18, this.config.width / 50));
     
     // Health bar background (black)
-    this.add.rectangle(
-      healthBarX, 
+    this.playerHealthBarBg = this.add.rectangle(
+      10, 
       healthBarY, 
       healthBarWidth, 
       healthBarHeight, 
@@ -206,41 +214,45 @@ export class PlayScene extends BaseScene {
     ).setOrigin(0, 0);
     
     // Health bar border (white)
-    this.add.rectangle(
-      healthBarX, 
+    this.playerHealthBarBorder = this.add.rectangle(
+      10, 
       healthBarY, 
       healthBarWidth, 
       healthBarHeight, 
-      0xffffff
-    ).setOrigin(0, 0).setStrokeStyle(2, 0xffffff, 1);
+      0x000000
+    ).setOrigin(0, 0)
+    .setStrokeStyle(2, 0xffffff, 1);
     
-    // Health bar fill (red)
+    // Health bar fill (starts green)
     this.playerHealthBar = this.add.rectangle(
-      healthBarX + 2, 
-      healthBarY + 2, 
-      healthBarWidth - 4, 
-      healthBarHeight - 4, 
-      0xff0000
+      12, // +2 padding from left
+      healthBarY + 2, // +2 padding from top
+      healthBarWidth - 4, // -4 for left and right padding
+      healthBarHeight - 4, // -4 for top and bottom padding
+      0x00ff00
     ).setOrigin(0, 0);
     
+    // Store the initial width for scaling
+    this.playerHealthBarInitialWidth = healthBarWidth - 4;
+    
     // Health text label
-    this.add.text(
-      healthBarX, 
-      healthBarY - 25, 
+    this.healthLabel = this.add.text(
+      10, 
+      healthBarY - baseFontSize - 5, 
       'Health', 
       {
-        fontSize: '14px',
+        fontSize: `${baseFontSize}px`,
         fill: '#ffffff'
       }
     );
     
     // Health value text
     this.playerHealthText = this.add.text(
-      healthBarX + healthBarWidth + 10, 
+      10 + healthBarWidth + 10, 
       healthBarY + 2, 
       `${this.playerCurrentHealth}/${this.playerMaxHealth}`, 
       {
-        fontSize: '12px',
+        fontSize: `${baseFontSize}px`,
         fill: '#ffffff'
       }
     );
@@ -295,8 +307,70 @@ export class PlayScene extends BaseScene {
       this.updateEnemies();
       this.updateHealthBars();
       this.cleanupOffscreenEnemies();
+      this.updateUIPositions();
     } catch (error) {
       console.error('Error in update loop:', error);
+    }
+  }
+
+  // Add this method to handle UI repositioning
+  updateUIPositions() {
+    if (!this.config) return;
+
+    // Calculate responsive font sizes
+    const baseFontSize = Math.max(12, Math.min(18, this.config.width / 50));
+    const headerFontSize = Math.max(14, Math.min(24, this.config.width / 40));
+    const healthBarWidth = Math.max(150, Math.min(200, this.config.width / 6));
+    const healthBarHeight = Math.max(15, Math.min(20, this.config.height / 30));
+    
+    // Update score and level text
+    if (this.scoreText) {
+      this.scoreText.setFontSize(baseFontSize);
+      this.scoreText.setPosition(16, 16);
+    }
+    
+    if (this.levelText) {
+      this.levelText.setFontSize(baseFontSize);
+      this.levelText.setPosition(16, 16 + baseFontSize + 10);
+    }
+    
+    if (this.waveText) {
+      this.waveText.setFontSize(baseFontSize);
+      this.waveText.setPosition(16, 16 + (baseFontSize + 10) * 2);
+    }
+    
+    if (this.characterText) {
+      this.characterText.setFontSize(baseFontSize);
+      this.characterText.setPosition(this.config.width - 16, 16);
+    }
+    
+    // Update health bar dimensions and position
+    const healthBarY = this.config.height - healthBarHeight - 20;
+    
+    if (this.playerHealthBar) {
+      // Background
+      this.playerHealthBarBg.setPosition(10, healthBarY)
+        .setSize(healthBarWidth, healthBarHeight);
+      
+      // Border
+      this.playerHealthBarBorder.setPosition(10, healthBarY)
+        .setSize(healthBarWidth, healthBarHeight);
+      
+      // Fill
+      this.playerHealthBar.setPosition(12, healthBarY + 2)
+        .setSize(healthBarWidth - 4, healthBarHeight - 4);
+      
+      // Update health text position and size
+      if (this.playerHealthText) {
+        this.playerHealthText.setFontSize(baseFontSize)
+          .setPosition(10 + healthBarWidth + 10, healthBarY + 2);
+      }
+      
+      // Update health label
+      if (this.healthLabel) {
+        this.healthLabel.setFontSize(baseFontSize)
+          .setPosition(10, healthBarY - baseFontSize - 5);
+      }
     }
   }
 
@@ -309,8 +383,35 @@ export class PlayScene extends BaseScene {
       
       // Update player health bar
       const healthPercent = this.playerCurrentHealth / this.playerMaxHealth;
-      const barWidth = 196; // 200 - 4 for padding
-      this.playerHealthBar.width = Math.max(0, barWidth * healthPercent);
+      
+      // Important: Set the DisplayWidth instead of width to properly scale the rectangle
+      const initialWidth = this.playerHealthBarInitialWidth;
+      this.playerHealthBar.displayWidth = Math.max(0, initialWidth * healthPercent);
+      
+      // Update color based on health percentage
+      let color;
+      if (healthPercent > 0.6) {
+        // Green to yellow gradient for high health (100% to 60%)
+        const t = (1 - healthPercent) * 2.5;
+        color = Phaser.Display.Color.Interpolate.ColorWithColor(
+          { r: 0, g: 255, b: 0 },
+          { r: 255, g: 255, b: 0 },
+          100,
+          Math.floor(t * 100)
+        );
+      } else {
+        // Yellow to red gradient for low health (60% to 0%)
+        const t = (0.6 - healthPercent) * (1 / 0.6);
+        color = Phaser.Display.Color.Interpolate.ColorWithColor(
+          { r: 255, g: 255, b: 0 },
+          { r: 255, g: 0, b: 0 },
+          100,
+          Math.floor(t * 100)
+        );
+      }
+      
+      const finalColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
+      this.playerHealthBar.setFillStyle(finalColor);
       
       // Update health text
       this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
@@ -436,52 +537,34 @@ export class PlayScene extends BaseScene {
       }
       
       // Randomly spawn enemies outside the visible area
-      const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
-      const buffer = 40; // Distance outside the screen
+      const side = Math.floor(Math.random() * 4);
+      const buffer = 40;
       let x, y;
       
       switch(side) {
-        case 0: // top
-          x = Phaser.Math.Between(0, this.config.width);
-          y = -buffer;
-          break;
-        case 1: // right
-          x = this.config.width + buffer;
-          y = Phaser.Math.Between(0, this.config.height);
-          break;
-        case 2: // bottom
-          x = Phaser.Math.Between(0, this.config.width);
-          y = this.config.height + buffer;
-          break;
-        case 3: // left
-          x = -buffer;
-          y = Phaser.Math.Between(0, this.config.height);
-          break;
+        case 0: x = Phaser.Math.Between(0, this.config.width); y = -buffer; break;
+        case 1: x = this.config.width + buffer; y = Phaser.Math.Between(0, this.config.height); break;
+        case 2: x = Phaser.Math.Between(0, this.config.width); y = this.config.height + buffer; break;
+        case 3: x = -buffer; y = Phaser.Math.Between(0, this.config.height); break;
       }
       
-      // Create a red rectangle as enemy
       const enemy = this.add.rectangle(x, y, 20, 20, 0xff0000);
-      
-      // Add physics to the rectangle
       this.physics.add.existing(enemy);
-      
-      // Add to the enemies group
       this.enemies.add(enemy);
       
-      // Calculate enemy health based on wave
-      const scalingFactor = 5; // Health increases by 5 per wave
-      enemy.maxHealth = this.enemyBaseHealth + (this.wave * scalingFactor);
+      // Enhanced enemy scaling with wave and level
+      const waveScaling = this.wave * 8; // More health per wave
+      const levelScaling = this.level * 3; // More health per level
+      enemy.maxHealth = this.enemyBaseHealth + waveScaling + levelScaling;
       enemy.currentHealth = enemy.maxHealth;
       
-      // Add custom properties
-      enemy.baseSpeed = this.enemyBaseSpeed * (0.8 + Math.random() * 0.4); // Randomize speed (80-120% of base)
-      enemy.damage = 5 + Math.floor(this.wave / 2); // Damage increases with waves
-      enemy.value = 10; // Score value
+      // Enhanced enemy properties scaling
+      const speedScaling = 1 + (this.wave * 0.1) + (this.level * 0.05); // Speed increases with progress
+      enemy.baseSpeed = this.enemyBaseSpeed * speedScaling * (0.8 + Math.random() * 0.4);
+      enemy.damage = 5 + Math.floor(this.wave * 1.5) + Math.floor(this.level * 0.5); // More damage as game progresses
+      enemy.value = 10 + Math.floor(this.wave * 2); // More points for higher waves
       
-      // Create enemy health bar
       this.createEnemyHealthBar(enemy);
-      
-      // Set initial movement toward the player
       this.physics.moveToObject(enemy, this.player, enemy.baseSpeed);
     } catch (error) {
       console.error('Error spawning enemy:', error);
@@ -503,13 +586,13 @@ export class PlayScene extends BaseScene {
         0x000000
       );
       
-      // Red health bar
+      // Yellow health bar at full health
       enemy.healthBar = this.add.rectangle(
         enemy.x - 10, 
         enemy.y - 15, 
         20, 
         4, 
-        0xff0000
+        0xFFFF00 // Yellow color for full health
       );
     } catch (error) {
       console.error('Error creating enemy health bar:', error);
@@ -523,37 +606,29 @@ export class PlayScene extends BaseScene {
    */
   handlePlayerEnemyCollision(player, enemy) {
     try {
-      // Check if enough time has passed since last damage
       const currentTime = this.time.now;
-      
+
       // Damage the player if not invulnerable
       if (!player.invulnerable && currentTime - this.lastPlayerDamageTime > this.playerDamageRate) {
         this.lastPlayerDamageTime = currentTime;
-        
-        // Calculate damage based on enemy properties and game state
         const baseDamage = enemy.damage || this.enemyContactDamage;
-        const levelMultiplier = 1 - (this.level * 0.01); // Damage reduction with level
-        const finalDamage = Math.max(1, Math.round(baseDamage * levelMultiplier)); 
-        
+        const levelMultiplier = 1 - (this.level * 0.01);
+        const finalDamage = Math.max(1, Math.round(baseDamage * levelMultiplier));
         this.damagePlayer(finalDamage);
-        
-        // Visual feedback
         this.cameras.main.shake(100, 0.01);
       }
-      
-      // Always damage the enemy when colliding with player
-      this.damageEnemy(enemy, 5); // Small damage on collision
+
+      // Damage the enemy every 5ms of contact
+      if (!enemy.lastDamageTime || currentTime - enemy.lastDamageTime >= 5) {
+        enemy.lastDamageTime = currentTime;
+        if (enemy.currentHealth === undefined) {
+          enemy.currentHealth = enemy.maxHealth || this.enemyBaseHealth;
+        }
+        const damage = (enemy.maxHealth || this.enemyBaseHealth) * 0.1; // 10% of max health
+        this.damageEnemy(enemy, damage);
+      }
     } catch (error) {
       console.error('Error in collision handler:', error);
-      // Try to destroy the enemy to prevent further errors
-      try {
-        this.destroyEnemy(enemy);
-      } catch (e) {
-        // Last resort - just try to remove it
-        if (enemy && enemy.destroy) {
-          enemy.destroy();
-        }
-      }
     }
   }
 
@@ -604,42 +679,34 @@ export class PlayScene extends BaseScene {
   damageEnemy(enemy, amount) {
     try {
       if (!enemy || !enemy.active) return;
-      
-      // Calculate damage based on player level
-      const levelBonus = this.level * 0.2; // 20% more damage per level
-      const finalDamage = Math.round(amount * (1 + levelBonus));
-      
-      // Make sure currentHealth is initialized
-      if (enemy.currentHealth === undefined) {
-        enemy.currentHealth = enemy.maxHealth || 30;
+
+      enemy.currentHealth = Math.max(0, enemy.currentHealth - amount);
+
+      // Health bar color: yellow at full, green to red gradient as it decreases
+      const healthPercent = enemy.currentHealth / enemy.maxHealth;
+      let color;
+      if (healthPercent === 1) {
+        color = { r: 255, g: 255, b: 0 }; // Yellow
+      } else {
+        // Green to red gradient
+        color = Phaser.Display.Color.Interpolate.ColorWithColor(
+          { r: 0, g: 255, b: 0 }, // Green
+          { r: 255, g: 0, b: 0 }, // Red
+          100,
+          100 - Math.floor(healthPercent * 100)
+        );
       }
-      
-      // Apply damage
-      enemy.currentHealth -= finalDamage;
-      
-      // Visual feedback - change color temporarily
-      const originalColor = enemy.fillColor;
-      enemy.fillColor = 0xff8080; // Lighter red
-      
-      // Reset color after a short delay
-      this.time.delayedCall(100, () => {
-        if (enemy && enemy.active) {
-          enemy.fillColor = 0xff0000; // Back to regular red
-        }
-      });
-      
-      // Check if enemy is defeated
+      enemy.healthBar.fillColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
+
       if (enemy.currentHealth <= 0) {
         this.addScore(enemy.value || 10);
         this.destroyEnemy(enemy);
       }
     } catch (error) {
       console.error('Error damaging enemy:', error);
-      // Try to destroy the enemy to prevent further errors
       try {
         this.destroyEnemy(enemy);
       } catch (e) {
-        // Last resort
         if (enemy && enemy.destroy) {
           enemy.destroy();
         }
@@ -648,33 +715,53 @@ export class PlayScene extends BaseScene {
   }
 
   /**
-   * Clean up and destroy an enemy
+   * Clean up and destroy an enemy with random effects
    * @param {Phaser.GameObjects.Rectangle} enemy - The enemy to destroy
    */
   destroyEnemy(enemy) {
     try {
-      // Destroy health bars
-      if (enemy.healthBar && enemy.healthBar.destroy) {
-        enemy.healthBar.destroy();
+      if (enemy.healthBar) enemy.healthBar.destroy();
+      if (enemy.healthBarBg) enemy.healthBarBg.destroy();
+
+      // Random destruction effect
+      const effectType = Phaser.Math.Between(1, 3);
+      switch (effectType) {
+        case 1: // Pop effect
+          this.tweens.add({
+            targets: enemy,
+            scaleX: 0,
+            scaleY: 0,
+            duration: 300,
+            onComplete: () => enemy.destroy(),
+          });
+          break;
+        case 2: // Blast effect
+          const blast = this.add.circle(enemy.x, enemy.y, 15, 0xff0000, 0.7);
+          this.tweens.add({
+            targets: blast,
+            alpha: 0,
+            scale: 2,
+            duration: 500,
+            onComplete: () => blast.destroy(),
+          });
+          enemy.destroy();
+          break;
+        case 3: // Glitch effect
+          this.tweens.add({
+            targets: enemy,
+            x: enemy.x + Phaser.Math.Between(-10, 10),
+            y: enemy.y + Phaser.Math.Between(-10, 10),
+            duration: 100,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => enemy.destroy(),
+          });
+          break;
       }
-      if (enemy.healthBarBg && enemy.healthBarBg.destroy) {
-        enemy.healthBarBg.destroy();
-      }
-      
-      // Create death effect
-      this.createCollisionEffect(enemy.x, enemy.y);
-      
-      // Destroy the enemy
-      enemy.destroy();
     } catch (error) {
       console.error('Error destroying enemy:', error);
-      // Last resort - brute force removal
-      try {
-        if (enemy && this.enemies) {
-          this.enemies.remove(enemy, true, true);
-        }
-      } catch (e) {
-        // Nothing else we can do
+      if (enemy && enemy.destroy) {
+        enemy.destroy();
       }
     }
   }
@@ -710,13 +797,17 @@ export class PlayScene extends BaseScene {
    */
   addScore(points) {
     try {
-      this.score += points;
+      // Increase points based on level and wave for more challenge
+      const scaledPoints = Math.floor(points * (1 + (this.level * 0.1) + (this.wave * 0.2)));
+      this.score += scaledPoints;
+      
       if (this.scoreText) {
         this.scoreText.setText(`Score: ${this.score}`);
       }
       
-      // Check for level up condition
-      if (this.score >= this.level * 100) {
+      // Check for level up condition using exponential scaling
+      const scoreToLevel = this.baseScoreToLevel * Math.pow(this.levelScoreMultiplier, this.level - 1);
+      if (this.score >= scoreToLevel) {
         this.levelUp();
       }
     } catch (error) {
@@ -734,20 +825,22 @@ export class PlayScene extends BaseScene {
         this.levelText.setText(`Level: ${this.level}`);
       }
       
-      // Increase wave after certain levels
-      if (this.level % 3 === 0) {
+      // Increase wave after certain levels (made less frequent)
+      if (this.level % 5 === 0) { // Changed from 3 to 5
         this.wave++;
         if (this.waveText) {
           this.waveText.setText(`Wave: ${this.wave}`);
         }
         
-        // Increase player max health with each wave
-        this.playerMaxHealth += 20; // Add 20 health per wave
+        // Limited health increase with cap
+        const prevMaxHealth = this.playerMaxHealth;
+        this.playerMaxHealth = Math.min(this.maxHealthCap, this.playerMaxHealth + this.healthIncreaseAmount);
         
-        // Also heal the player a bit on wave completion
+        // Smaller heal on wave completion (20% instead of 30%)
+        const healAmount = this.playerMaxHealth * 0.2;
         this.playerCurrentHealth = Math.min(
-          this.playerMaxHealth, 
-          this.playerCurrentHealth + (this.playerMaxHealth * 0.3)
+          this.playerMaxHealth,
+          this.playerCurrentHealth + healAmount
         );
         
         // Update text
@@ -763,8 +856,12 @@ export class PlayScene extends BaseScene {
         // Flash effect failed, continue anyway
       }
       
-      // Increase player abilities
-      this.playerSpeed = Math.min(300, this.playerSpeed + 10);
+      // Slower player speed increase
+      this.playerSpeed = Math.min(300, this.playerSpeed + 5); // Changed from 10 to 5
+      
+      // Increase enemy spawn rate and damage with each level
+      this.enemySpawnRate = Math.max(500, this.enemySpawnRate - 50);
+      this.enemyContactDamage = Math.min(20, this.enemyContactDamage + 1);
       
       // Create level up effect
       this.createLevelUpEffect();
@@ -833,61 +930,84 @@ export class PlayScene extends BaseScene {
    */
   gameOver() {
     try {
-      // Stop physics
+      // Stop physics and game loops
       this.physics.pause();
-
-      // Stop enemy spawning
-      if (this.enemySpawnTimer) {
-        this.enemySpawnTimer.remove();
-      }
-      if (this.difficultyTimer) {
-        this.difficultyTimer.remove();
-      }
+      if (this.enemySpawnTimer) this.enemySpawnTimer.remove();
+      if (this.difficultyTimer) this.difficultyTimer.remove();
       
-      // Create game over text
+      // Create centered container for game over elements
+      const centerX = this.config.width / 2;
+      const centerY = this.config.height / 2;
+      
+      // Create game over text with consistent styling
       const gameOverText = this.add.text(
-        this.config.width / 2,
-        this.config.height / 2 - 50,
+        centerX,
+        centerY - 80,
         'GAME OVER',
         {
           fontSize: '48px',
+          fontFamily: '"Press Start 2P"',
           fill: '#ff0000',
-          stroke: '#000',
-          strokeThickness: 6
+          stroke: '#000000',
+          strokeThickness: 6,
+          align: 'center'
         }
       ).setOrigin(0.5);
       
-      // Add final score
+      // Add final score with consistent styling
       const finalScoreText = this.add.text(
-        this.config.width / 2,
-        this.config.height / 2 + 20,
+        centerX,
+        centerY,
         `Final Score: ${this.score}`,
         {
           fontSize: '24px',
+          fontFamily: '"Press Start 2P"',
           fill: '#ffffff',
-          stroke: '#000',
-          strokeThickness: 4
+          stroke: '#000000',
+          strokeThickness: 4,
+          align: 'center'
         }
       ).setOrigin(0.5);
       
-      // Add restart button
+      // Add centered restart button with consistent styling
       const restartButton = this.add.text(
-        this.config.width / 2,
-        this.config.height / 2 + 80,
+        centerX,
+        centerY + 80,
         'RESTART',
         {
           fontSize: '24px',
+          fontFamily: '"Press Start 2P"',
           fill: '#00ff00',
-          stroke: '#000',
+          stroke: '#000000',
           strokeThickness: 4,
-          padding: { x: 20, y: 10 }
+          padding: { x: 20, y: 10 },
+          align: 'center'
         }
       )
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => restartButton.setStyle({ fill: '#ff00ff' }))
-      .on('pointerout', () => restartButton.setStyle({ fill: '#00ff00' }))
+      .on('pointerover', () => {
+        restartButton.setStyle({ fill: '#ff00ff' });
+        restartButton.setScale(1.1);
+      })
+      .on('pointerout', () => {
+        restartButton.setStyle({ fill: '#00ff00' });
+        restartButton.setScale(1);
+      })
       .on('pointerdown', () => this.scene.restart());
+      
+      // Add centered restart instruction
+      const restartInstruction = this.add.text(
+        centerX,
+        centerY + 140,
+        'Press R to restart',
+        {
+          fontSize: '16px',
+          fontFamily: '"Press Start 2P"',
+          fill: '#666666',
+          align: 'center'
+        }
+      ).setOrigin(0.5);
       
       // Add keyboard restart option
       this.input.keyboard.once('keydown-R', () => {
