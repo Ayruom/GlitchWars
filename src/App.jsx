@@ -10,7 +10,7 @@ export default function App() {
       {/* 🔲 Scanline Overlay */}
       <div className="absolute inset-0 bg-[url('/scanline.png')] opacity-10 z-10 pointer-events-none" />
 
-      {/* 🔮 Content */}
+      {/* 🔮 Main Content */}
       <div className="relative z-20 space-y-20">
         <HeroSection />
         <HeroSelectionComponent />
