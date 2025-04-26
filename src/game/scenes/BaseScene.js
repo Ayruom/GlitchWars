@@ -5,9 +5,19 @@ export class BaseScene extends Phaser.Scene {
     super(key);
     this.config = config;
     this.screenCenter = [config.width / 2, config.height / 2];
-    this.fontSize = 32;
-    this.lineHeight = 42;
-    this.fontOptions = { fontSize: `${this.fontSize}px`, fill: "#00ff00" };
+    this.updateFontSize();
+  }
+
+  updateFontSize() {
+    // Calculate responsive font sizes based on screen dimensions
+    this.fontSize = Math.max(16, Math.min(32, this.config.width / 40));
+    this.lineHeight = this.fontSize * 1.3;
+    this.fontOptions = { 
+      fontSize: `${this.fontSize}px`, 
+      fill: "#00ff00",
+      stroke: '#000000',
+      strokeThickness: Math.max(1, this.fontSize / 16)
+    };
   }
 
   create() {
@@ -38,11 +48,14 @@ export class BaseScene extends Phaser.Scene {
     this.scanlines.setBlendMode(Phaser.BlendModes.OVERLAY);
 
     if (this.config.canGoBack) {
+      const backButtonSize = Math.max(12, Math.min(16, this.config.width / 60));
+      const padding = Math.max(5, Math.min(10, this.config.width / 100));
+      
       const backButton = this.add
-        .text(this.config.width - 10, 10, "BACK", {
-          fontSize: "16px",
+        .text(this.config.width - padding * 2, padding * 2, "BACK", {
+          fontSize: `${backButtonSize}px`,
           fill: "#00ff00",
-          padding: { x: 10, y: 5 },
+          padding: { x: padding, y: padding / 2 },
         })
         .setOrigin(1, 0)
         .setInteractive({ useHandCursor: true })
@@ -78,6 +91,7 @@ export class BaseScene extends Phaser.Scene {
 
   createMenu(menu, setupMenuEvents) {
     let lastMenuPositionY = 0;
+    const spacing = this.fontSize * 0.5;
 
     menu.forEach((menuItem) => {
       const menuPosition = [
@@ -88,7 +102,7 @@ export class BaseScene extends Phaser.Scene {
         .text(menuPosition[0], menuPosition[1], menuItem.text, this.fontOptions)
         .setOrigin(0.5, 1);
 
-      lastMenuPositionY += this.lineHeight;
+      lastMenuPositionY += this.lineHeight + spacing;
       setupMenuEvents(menuItem);
     });
   }

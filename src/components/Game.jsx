@@ -16,24 +16,43 @@ export function Game() {
     let game = null;
     
     if (gameContainerRef.current) {
-      // Update loading state
       setIsLoading(true);
       
-      // Calculate responsive dimensions
+      // Enhanced responsive dimensions calculation
       const updateGameSize = () => {
-        const width = Math.min(window.innerWidth, 1200);
-        const height = Math.min(window.innerHeight - 100, 900);
+        const containerWidth = gameContainerRef.current.clientWidth;
+        const containerHeight = gameContainerRef.current.clientHeight;
+        const aspectRatio = 16 / 9; // Maintain 16:9 aspect ratio
+        
+        let width, height;
+        
+        // Calculate dimensions while maintaining aspect ratio
+        if (containerWidth / containerHeight > aspectRatio) {
+          height = containerHeight;
+          width = height * aspectRatio;
+        } else {
+          width = containerWidth;
+          height = width / aspectRatio;
+        }
+        
+        // Ensure minimum dimensions
+        width = Math.max(width, 320);
+        height = Math.max(height, 240);
         
         if (game) {
           game.scale.resize(width, height);
+          // Trigger UI position update in the active scene
+          const activeScene = game.scene.getScenes(true)[0];
+          if (activeScene && activeScene.updateUIPositions) {
+            activeScene.updateUIPositions();
+          }
         }
+        
         return { width, height };
       };
       
-      // Get initial size
       const { width, height } = updateGameSize();
       
-      // Game configuration
       const config = {
         type: Phaser.AUTO,
         width,
@@ -50,7 +69,17 @@ export function Game() {
         },
         scale: {
           mode: Phaser.Scale.RESIZE,
-          autoCenter: Phaser.Scale.CENTER_BOTH
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+          width: width,
+          height: height,
+          min: {
+            width: 320,
+            height: 240
+          },
+          max: {
+            width: 1920,
+            height: 1080
+          }
         },
         scene: [
           new BootScene({ width, height }),
@@ -59,30 +88,30 @@ export function Game() {
         ]
       };
       
-      // Initialize the game
       game = new Phaser.Game(config);
       
-      // Pass the selected hero to the PlayScene
       game.events.once('ready', () => {
         setIsLoading(false);
         setGameLoaded(true);
-        
-        // If a hero was selected, start the PlayScene directly
         if (selectedHero) {
           game.scene.start('PlayScene', { hero: selectedHero });
         }
       });
       
-      // Handle window resizing
-      const resizeListener = () => {
-        updateGameSize();
+      // Debounced resize handler
+      let resizeTimeout;
+      const handleResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          updateGameSize();
+        }, 250);
       };
       
-      window.addEventListener('resize', resizeListener);
+      window.addEventListener('resize', handleResize);
       
-      // Cleanup on unmount
       return () => {
-        window.removeEventListener('resize', resizeListener);
+        window.removeEventListener('resize', handleResize);
+        clearTimeout(resizeTimeout);
         if (game) {
           game.destroy(true);
         }
@@ -91,30 +120,23 @@ export function Game() {
   }, [selectedHero]);
   
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-black overflow-hidden">
-      {/* Scanline overlay */}
-      <div className="absolute inset-0 bg-[url('/scanline.png')] opacity-10 z-10 pointer-events-none" />
-      
-      {/* Glitch-style border */}
-      <div className="relative w-full max-w-[1200px] h-[80vh] max-h-[900px] border-4 border-pink-500 shadow-[0_0_15px_rgba(255,0,255,0.5)]">
-        {/* Loading overlay */}
+    <div className="w-full h-[calc(100vh-3rem)] flex flex-col items-center justify-center">
+      <div className="relative w-[95%] max-w-[1600px] h-[85%] border-4 border-pink-500 shadow-[0_0_15px_rgba(255,0,255,0.5)]">
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center z-20 bg-black bg-opacity-70">
             <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
-            <span className="ml-4 text-green-500 font-pixel">Loading Game...</span>
+            <span className="ml-4 text-green-500 font-pixel text-sm sm:text-base">Loading Game...</span>
           </div>
         )}
         
-        {/* Game container */}
         <div 
           ref={gameContainerRef} 
           className="w-full h-full bg-black"
         />
       </div>
       
-      {/* Game controls info */}
-      <div className="text-green-400 text-xs md:text-sm mt-4 max-w-md text-center font-pixel">
-        <p>Use ARROW KEYS to move • Defeat enemies to earn points • Survive as long as possible</p>
+      <div className="text-green-400 text-[10px] sm:text-xs md:text-sm mt-2 px-4 max-w-full text-center font-pixel">
+        <p className="break-words">Use ARROW KEYS or WASD to move • Defeat enemies to earn points • Survive as long as possible</p>
       </div>
     </div>
   );
