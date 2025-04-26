@@ -833,6 +833,9 @@ export class PlayScene extends BaseScene {
    */
   gameOver() {
     try {
+      // Stop physics
+      this.physics.pause();
+
       // Stop enemy spawning
       if (this.enemySpawnTimer) {
         this.enemySpawnTimer.remove();
