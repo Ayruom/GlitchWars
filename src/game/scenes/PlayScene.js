@@ -735,7 +735,7 @@ export class PlayScene extends BaseScene {
             onComplete: () => enemy.destroy(),
           });
           break;
-        case 2: // Blast effect
+        case 2: { // Blast effect
           const blast = this.add.circle(enemy.x, enemy.y, 15, 0xff0000, 0.7);
           this.tweens.add({
             targets: blast,
@@ -746,6 +746,7 @@ export class PlayScene extends BaseScene {
           });
           enemy.destroy();
           break;
+        }
         case 3: // Glitch effect
           this.tweens.add({
             targets: enemy,
