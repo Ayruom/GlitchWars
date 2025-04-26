@@ -62,9 +62,10 @@ export class PlayScene extends BaseScene {
    */
   create() {
     try {
-      // We'll create a simplified version of what BaseScene.create() does
-      // instead of calling super.create() which might cause errors
-      this.createBackground();
+      // Create a black background
+      this.add.rectangle(0, 0, this.config.width, this.config.height, 0x000000)
+        .setOrigin(0)
+        .setDepth(-1);
       
       // Create other game elements
       this.createPlayer();
@@ -78,24 +79,6 @@ export class PlayScene extends BaseScene {
       // Create minimal fallback UI to show something
       this.createFallbackUI();
     }
-  }
-
-  /**
-   * Create a background for the scene
-   */
-  createBackground() {
-    // Create a black background
-    this.add.rectangle(0, 0, this.config.width, this.config.height, 0x000000)
-      .setOrigin(0)
-      .setDepth(-1);
-      
-    // Add scanlines effect (simple version)
-    const scanlines = this.add.rectangle(
-      0, 0, 
-      this.config.width, this.config.height, 
-      0x000000, 0.2
-    );
-    scanlines.setOrigin(0, 0);
   }
 
   /**
@@ -129,53 +112,26 @@ export class PlayScene extends BaseScene {
    */
   createPlayer() {
     try {
-      // Create player as a simple shape instead of trying to use a sprite
-      // This avoids issues with missing assets
-      this.player = this.physics.add.image(
-        this.config.width / 2, 
-        this.config.height / 2, 
-        'pixel' // We'll generate this texture if needed
+      // Create a green rectangle as the player
+      this.player = this.add.rectangle(
+        this.config.width / 2,
+        this.config.height / 2,
+        30, 30,
+        0x00ff00
       );
       
-      // If the texture doesn't exist, create a temporary one
-      if (!this.textures.exists('pixel')) {
-        const graphics = this.add.graphics();
-        graphics.fillStyle(0x00ff00); // Green
-        graphics.fillRect(0, 0, 30, 30);
-        graphics.generateTexture('pixel', 30, 30);
-        graphics.destroy();
-      }
-
-      // Configure player physics
-      this.player.setCollideWorldBounds(true);
+      // Add physics to the rectangle
+      this.physics.add.existing(this.player);
+      
+      // Set world bounds collision
+      this.player.body.collideWorldBounds = true;
       
       // Add health properties as direct properties of the player
       this.player.maxHealth = this.playerMaxHealth;
       this.player.currentHealth = this.playerCurrentHealth;
       this.player.invulnerable = false;
-      
     } catch (error) {
       console.error('Error creating player:', error);
-      
-      // Create a very basic fallback that will at least work
-      const graphics = this.add.graphics();
-      graphics.fillStyle(0x00ff00); // Green
-      graphics.fillRect(0, 0, 30, 30);
-      
-      // Create a physics-enabled rectangle as the player
-      const playerX = this.config.width / 2;
-      const playerY = this.config.height / 2;
-      
-      this.player = this.add.rectangle(playerX, playerY, 30, 30, 0x00ff00);
-      this.physics.add.existing(this.player);
-      
-      // Manually add a flag to track if player is at world bounds
-      this.player.body.collideWorldBounds = true;
-      
-      // Add health properties
-      this.player.maxHealth = this.playerMaxHealth;
-      this.player.currentHealth = this.playerCurrentHealth;
-      this.player.invulnerable = false;
     }
   }
 
@@ -231,12 +187,12 @@ export class PlayScene extends BaseScene {
   }
 
   /**
-   * Create health bars for player
+   * Create health bars for player and enemies
    */
   createHealthBars() {
     // Create player health bar container
     const healthBarX = 20;
-    const healthBarY = this.config.height - 75;
+    const healthBarY = this.config.height - 50;
     const healthBarWidth = 200;
     const healthBarHeight = 20;
     
@@ -332,45 +288,57 @@ export class PlayScene extends BaseScene {
    * @param {number} delta - Time since last update
    */
   update(time, delta) {
-    if (!this.player || !this.player.active) return;
-    
-    this.handlePlayerMovement();
-    this.updateEnemies();
-    this.updateHealthBars();
-    this.cleanupOffscreenEnemies();
+    try {
+      if (!this.player || !this.player.body) return;
+      
+      this.handlePlayerMovement();
+      this.updateEnemies();
+      this.updateHealthBars();
+      this.cleanupOffscreenEnemies();
+    } catch (error) {
+      console.error('Error in update loop:', error);
+    }
   }
 
   /**
    * Update health bars for player and enemies
    */
   updateHealthBars() {
-    if (!this.playerHealthBar || !this.playerHealthText) return;
-    
-    // Update player health bar
-    const healthPercent = this.playerCurrentHealth / this.playerMaxHealth;
-    const barWidth = 196; // 200 - 4 for padding
-    this.playerHealthBar.width = Math.max(0, barWidth * healthPercent);
-    
-    // Update health text
-    this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
-    
-    // Update enemy health bars
-    this.enemies.getChildren().forEach(enemy => {
-      if (enemy.healthBar && enemy.currentHealth) {
-        const enemyHealthPercent = enemy.currentHealth / enemy.maxHealth;
-        enemy.healthBar.width = Math.max(0, 20 * enemyHealthPercent);
-        
-        // Position the health bar above the enemy
-        enemy.healthBar.x = enemy.x - 10;
-        enemy.healthBar.y = enemy.y - 15;
-        
-        // Position the health bar background
-        if (enemy.healthBarBg) {
-          enemy.healthBarBg.x = enemy.x - 10;
-          enemy.healthBarBg.y = enemy.y - 15;
+    try {
+      if (!this.playerHealthBar || !this.playerHealthText) return;
+      
+      // Update player health bar
+      const healthPercent = this.playerCurrentHealth / this.playerMaxHealth;
+      const barWidth = 196; // 200 - 4 for padding
+      this.playerHealthBar.width = Math.max(0, barWidth * healthPercent);
+      
+      // Update health text
+      this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
+      
+      // Update enemy health bars
+      this.enemies.getChildren().forEach(enemy => {
+        try {
+          if (enemy.healthBar && enemy.currentHealth !== undefined) {
+            const enemyHealthPercent = enemy.currentHealth / enemy.maxHealth;
+            enemy.healthBar.width = Math.max(0, 20 * enemyHealthPercent);
+            
+            // Position the health bar above the enemy
+            enemy.healthBar.x = enemy.x - 10;
+            enemy.healthBar.y = enemy.y - 15;
+            
+            // Position the health bar background
+            if (enemy.healthBarBg) {
+              enemy.healthBarBg.x = enemy.x - 10;
+              enemy.healthBarBg.y = enemy.y - 15;
+            }
+          }
+        } catch (e) {
+          // Skip this enemy if there's an error updating its health bar
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error updating health bars:', error);
+    }
   }
 
   /**
@@ -402,9 +370,9 @@ export class PlayScene extends BaseScene {
    */
   updateEnemies() {
     this.enemies.getChildren().forEach(enemy => {
-      if (!enemy.active || !this.player.active) return;
-      
       try {
+        if (!enemy.active || !this.player.active) return;
+        
         // Calculate distance to player
         const distance = Phaser.Math.Distance.Between(
           enemy.x, enemy.y,
@@ -412,16 +380,16 @@ export class PlayScene extends BaseScene {
         );
         
         // Dynamic speed based on distance (faster when further away)
-        const minSpeed = enemy.baseSpeed * 0.5;
-        const maxSpeed = enemy.baseSpeed * 1.2;
+        const baseSpeed = enemy.baseSpeed || this.enemyBaseSpeed;
+        const minSpeed = baseSpeed * 0.5;
+        const maxSpeed = baseSpeed * 1.2;
         const speedFactor = Math.min(1, Math.max(0.5, distance / 300));
         const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
         
         // Update enemy direction to follow player
         this.physics.moveToObject(enemy, this.player, speed);
-        
       } catch (error) {
-        console.error('Error updating enemy:', error);
+        // Skip this enemy if there's an error updating it
       }
     });
   }
@@ -430,39 +398,43 @@ export class PlayScene extends BaseScene {
    * Clean up enemies that have moved off-screen
    */
   cleanupOffscreenEnemies() {
-    // Define a larger boundary to avoid premature destruction
-    const buffer = 50;
-    const bounds = {
-      left: -buffer,
-      right: this.config.width + buffer,
-      top: -buffer,
-      bottom: this.config.height + buffer
-    };
-    
-    this.enemies.getChildren().forEach(enemy => {
-      if (
-        enemy.x < bounds.left ||
-        enemy.x > bounds.right ||
-        enemy.y < bounds.top ||
-        enemy.y > bounds.bottom
-      ) {
-        this.destroyEnemy(enemy);
-      }
-    });
+    try {
+      // Define a larger boundary to avoid premature destruction
+      const buffer = 50;
+      const bounds = {
+        left: -buffer,
+        right: this.config.width + buffer,
+        top: -buffer,
+        bottom: this.config.height + buffer
+      };
+      
+      this.enemies.getChildren().forEach(enemy => {
+        if (
+          enemy.x < bounds.left ||
+          enemy.x > bounds.right ||
+          enemy.y < bounds.top ||
+          enemy.y > bounds.bottom
+        ) {
+          this.destroyEnemy(enemy);
+        }
+      });
+    } catch (error) {
+      console.error('Error cleaning up enemies:', error);
+    }
   }
 
   /**
    * Spawn a new enemy at a random location outside the screen
    */
   spawnEnemy() {
-    if (!this.enemies) return;
-    
-    // Limit maximum number of enemies for performance
-    if (this.enemies.getChildren().length >= this.maxEnemies) {
-      return;
-    }
-    
     try {
+      if (!this.enemies) return;
+      
+      // Limit maximum number of enemies for performance
+      if (this.enemies.getChildren().length >= this.maxEnemies) {
+        return;
+      }
+      
       // Randomly spawn enemies outside the visible area
       const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
       const buffer = 40; // Distance outside the screen
@@ -511,7 +483,6 @@ export class PlayScene extends BaseScene {
       
       // Set initial movement toward the player
       this.physics.moveToObject(enemy, this.player, enemy.baseSpeed);
-      
     } catch (error) {
       console.error('Error spawning enemy:', error);
     }
@@ -522,23 +493,27 @@ export class PlayScene extends BaseScene {
    * @param {Phaser.GameObjects.Rectangle} enemy - The enemy to add a health bar to
    */
   createEnemyHealthBar(enemy) {
-    // Black background for health bar
-    enemy.healthBarBg = this.add.rectangle(
-      enemy.x - 10, 
-      enemy.y - 15, 
-      22, 
-      6, 
-      0x000000
-    );
-    
-    // Red health bar
-    enemy.healthBar = this.add.rectangle(
-      enemy.x - 10, 
-      enemy.y - 15, 
-      20, 
-      4, 
-      0xff0000
-    );
+    try {
+      // Black background for health bar
+      enemy.healthBarBg = this.add.rectangle(
+        enemy.x - 10, 
+        enemy.y - 15, 
+        22, 
+        6, 
+        0x000000
+      );
+      
+      // Red health bar
+      enemy.healthBar = this.add.rectangle(
+        enemy.x - 10, 
+        enemy.y - 15, 
+        20, 
+        4, 
+        0xff0000
+      );
+    } catch (error) {
+      console.error('Error creating enemy health bar:', error);
+    }
   }
 
   /**
@@ -547,26 +522,39 @@ export class PlayScene extends BaseScene {
    * @param {Phaser.GameObjects.Rectangle} enemy - Enemy object
    */
   handlePlayerEnemyCollision(player, enemy) {
-    // Check if enough time has passed since last damage
-    const currentTime = this.time.now;
-    
-    // Damage the player if not invulnerable
-    if (!player.invulnerable && currentTime - this.lastPlayerDamageTime > this.playerDamageRate) {
-      this.lastPlayerDamageTime = currentTime;
+    try {
+      // Check if enough time has passed since last damage
+      const currentTime = this.time.now;
       
-      // Calculate damage based on enemy properties and game state
-      const baseDamage = enemy.damage || this.enemyContactDamage;
-      const levelMultiplier = 1 - (this.level * 0.01); // Damage reduction with level
-      const finalDamage = Math.max(1, Math.round(baseDamage * levelMultiplier)); 
+      // Damage the player if not invulnerable
+      if (!player.invulnerable && currentTime - this.lastPlayerDamageTime > this.playerDamageRate) {
+        this.lastPlayerDamageTime = currentTime;
+        
+        // Calculate damage based on enemy properties and game state
+        const baseDamage = enemy.damage || this.enemyContactDamage;
+        const levelMultiplier = 1 - (this.level * 0.01); // Damage reduction with level
+        const finalDamage = Math.max(1, Math.round(baseDamage * levelMultiplier)); 
+        
+        this.damagePlayer(finalDamage);
+        
+        // Visual feedback
+        this.cameras.main.shake(100, 0.01);
+      }
       
-      this.damagePlayer(finalDamage);
-      
-      // Visual feedback
-      this.cameras.main.shake(100, 0.01);
+      // Always damage the enemy when colliding with player
+      this.damageEnemy(enemy, 5); // Small damage on collision
+    } catch (error) {
+      console.error('Error in collision handler:', error);
+      // Try to destroy the enemy to prevent further errors
+      try {
+        this.destroyEnemy(enemy);
+      } catch (e) {
+        // Last resort - just try to remove it
+        if (enemy && enemy.destroy) {
+          enemy.destroy();
+        }
+      }
     }
-    
-    // Always damage the enemy when colliding with player
-    this.damageEnemy(enemy, 5); // Small damage on collision
   }
 
   /**
@@ -574,30 +562,37 @@ export class PlayScene extends BaseScene {
    * @param {number} amount - Damage amount
    */
   damagePlayer(amount) {
-    // Skip if player is invulnerable
-    if (this.player.invulnerable) return;
-    
-    // Apply damage
-    this.playerCurrentHealth = Math.max(0, this.playerCurrentHealth - amount);
-    this.player.currentHealth = this.playerCurrentHealth;
-    
-    // Make player flash red
-    this.player.setTint(0xff0000);
-    
-    // Make player temporarily invulnerable
-    this.player.invulnerable = true;
-    
-    // Reset after invulnerability period
-    this.time.delayedCall(1000, () => {
-      if (this.player && this.player.active) {
-        this.player.clearTint();
-        this.player.invulnerable = false;
+    try {
+      // Skip if player is invulnerable
+      if (!this.player || this.player.invulnerable) return;
+      
+      // Apply damage
+      this.playerCurrentHealth = Math.max(0, this.playerCurrentHealth - amount);
+      this.player.currentHealth = this.playerCurrentHealth;
+      
+      // Visual feedback - red flash
+      // We'll use a fill color change for the rectangle instead of tinting
+      const originalColor = this.player.fillColor;
+      this.player.fillColor = 0xff0000;
+      
+      // Make player temporarily invulnerable
+      this.player.invulnerable = true;
+      
+      // Reset after invulnerability period
+      this.time.delayedCall(1000, () => {
+        if (this.player && this.player.active) {
+          // Reset the color
+          this.player.fillColor = 0x00ff00; // Back to green
+          this.player.invulnerable = false;
+        }
+      });
+      
+      // Check for game over
+      if (this.playerCurrentHealth <= 0) {
+        this.gameOver();
       }
-    });
-    
-    // Check for game over
-    if (this.playerCurrentHealth <= 0) {
-      this.gameOver();
+    } catch (error) {
+      console.error('Error damaging player:', error);
     }
   }
 
@@ -607,27 +602,48 @@ export class PlayScene extends BaseScene {
    * @param {number} amount - Damage amount
    */
   damageEnemy(enemy, amount) {
-    if (!enemy || !enemy.active) return;
-    
-    // Calculate damage based on player level
-    const levelBonus = this.level * 0.2; // 20% more damage per level
-    const finalDamage = Math.round(amount * (1 + levelBonus));
-    
-    // Apply damage
-    enemy.currentHealth -= finalDamage;
-    
-    // Flash enemy red
-    enemy.setTint(0xff0000);
-    this.time.delayedCall(100, () => {
-      if (enemy && enemy.active) {
-        enemy.clearTint();
+    try {
+      if (!enemy || !enemy.active) return;
+      
+      // Calculate damage based on player level
+      const levelBonus = this.level * 0.2; // 20% more damage per level
+      const finalDamage = Math.round(amount * (1 + levelBonus));
+      
+      // Make sure currentHealth is initialized
+      if (enemy.currentHealth === undefined) {
+        enemy.currentHealth = enemy.maxHealth || 30;
       }
-    });
-    
-    // Check if enemy is defeated
-    if (enemy.currentHealth <= 0) {
-      this.addScore(enemy.value || 10);
-      this.destroyEnemy(enemy);
+      
+      // Apply damage
+      enemy.currentHealth -= finalDamage;
+      
+      // Visual feedback - change color temporarily
+      const originalColor = enemy.fillColor;
+      enemy.fillColor = 0xff8080; // Lighter red
+      
+      // Reset color after a short delay
+      this.time.delayedCall(100, () => {
+        if (enemy && enemy.active) {
+          enemy.fillColor = 0xff0000; // Back to regular red
+        }
+      });
+      
+      // Check if enemy is defeated
+      if (enemy.currentHealth <= 0) {
+        this.addScore(enemy.value || 10);
+        this.destroyEnemy(enemy);
+      }
+    } catch (error) {
+      console.error('Error damaging enemy:', error);
+      // Try to destroy the enemy to prevent further errors
+      try {
+        this.destroyEnemy(enemy);
+      } catch (e) {
+        // Last resort
+        if (enemy && enemy.destroy) {
+          enemy.destroy();
+        }
+      }
     }
   }
 
@@ -638,10 +654,10 @@ export class PlayScene extends BaseScene {
   destroyEnemy(enemy) {
     try {
       // Destroy health bars
-      if (enemy.healthBar) {
+      if (enemy.healthBar && enemy.healthBar.destroy) {
         enemy.healthBar.destroy();
       }
-      if (enemy.healthBarBg) {
+      if (enemy.healthBarBg && enemy.healthBarBg.destroy) {
         enemy.healthBarBg.destroy();
       }
       
@@ -652,6 +668,14 @@ export class PlayScene extends BaseScene {
       enemy.destroy();
     } catch (error) {
       console.error('Error destroying enemy:', error);
+      // Last resort - brute force removal
+      try {
+        if (enemy && this.enemies) {
+          this.enemies.remove(enemy, true, true);
+        }
+      } catch (e) {
+        // Nothing else we can do
+      }
     }
   }
 
@@ -661,15 +685,23 @@ export class PlayScene extends BaseScene {
    * @param {number} y - Y coordinate
    */
   createCollisionEffect(x, y) {
-    // Create a simple circle effect
-    const effect = this.add.circle(x, y, 15, 0xff0000, 0.7);
-    this.tweens.add({
-      targets: effect,
-      alpha: 0,
-      scale: 1.5,
-      duration: 300,
-      onComplete: () => effect.destroy()
-    });
+    try {
+      // Create a simple circle effect
+      const effect = this.add.circle(x, y, 15, 0xff0000, 0.7);
+      this.tweens.add({
+        targets: effect,
+        alpha: 0,
+        scale: 1.5,
+        duration: 300,
+        onComplete: () => {
+          if (effect && effect.destroy) {
+            effect.destroy();
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error creating collision effect:', error);
+    }
   }
 
   /**
@@ -677,14 +709,18 @@ export class PlayScene extends BaseScene {
    * @param {number} points - Points to add
    */
   addScore(points) {
-    this.score += points;
-    if (this.scoreText) {
-      this.scoreText.setText(`Score: ${this.score}`);
-    }
-    
-    // Check for level up condition
-    if (this.score >= this.level * 100) {
-      this.levelUp();
+    try {
+      this.score += points;
+      if (this.scoreText) {
+        this.scoreText.setText(`Score: ${this.score}`);
+      }
+      
+      // Check for level up condition
+      if (this.score >= this.level * 100) {
+        this.levelUp();
+      }
+    } catch (error) {
+      console.error('Error adding score:', error);
     }
   }
 
@@ -692,46 +728,49 @@ export class PlayScene extends BaseScene {
    * Increase player level and difficulty
    */
   levelUp() {
-    this.level++;
-    if (this.levelText) {
-      this.levelText.setText(`Level: ${this.level}`);
-    }
-    
-    // Increase wave after certain levels
-    if (this.level % 3 === 0) {
-      this.wave++;
-      if (this.waveText) {
-        this.waveText.setText(`Wave: ${this.wave}`);
-      }
-      
-      // Increase player max health with each wave
-      const oldMaxHealth = this.playerMaxHealth;
-      this.playerMaxHealth += 20; // Add 20 health per wave
-      
-      // Also heal the player a bit on wave completion
-      this.playerCurrentHealth = Math.min(
-        this.playerMaxHealth, 
-        this.playerCurrentHealth + (this.playerMaxHealth * 0.3)
-      );
-      
-      // Update text
-      if (this.playerHealthText) {
-        this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
-      }
-    }
-    
-    // Visual feedback for level up
     try {
-      this.cameras.main.flash(500, 0, 255, 0, 0.3);
+      this.level++;
+      if (this.levelText) {
+        this.levelText.setText(`Level: ${this.level}`);
+      }
+      
+      // Increase wave after certain levels
+      if (this.level % 3 === 0) {
+        this.wave++;
+        if (this.waveText) {
+          this.waveText.setText(`Wave: ${this.wave}`);
+        }
+        
+        // Increase player max health with each wave
+        this.playerMaxHealth += 20; // Add 20 health per wave
+        
+        // Also heal the player a bit on wave completion
+        this.playerCurrentHealth = Math.min(
+          this.playerMaxHealth, 
+          this.playerCurrentHealth + (this.playerMaxHealth * 0.3)
+        );
+        
+        // Update text
+        if (this.playerHealthText) {
+          this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
+        }
+      }
+      
+      // Visual feedback for level up
+      try {
+        this.cameras.main.flash(500, 0, 255, 0, 0.3);
+      } catch (e) {
+        // Flash effect failed, continue anyway
+      }
+      
+      // Increase player abilities
+      this.playerSpeed = Math.min(300, this.playerSpeed + 10);
+      
+      // Create level up effect
+      this.createLevelUpEffect();
     } catch (error) {
-      console.error('Error flashing camera:', error);
+      console.error('Error in level up:', error);
     }
-    
-    // Increase player abilities
-    this.playerSpeed = Math.min(300, this.playerSpeed + 10);
-    
-    // Create level up effect
-    this.createLevelUpEffect();
   }
 
   /**
@@ -757,7 +796,11 @@ export class PlayScene extends BaseScene {
         alpha: 0,
         duration: 1500,
         ease: 'Power2',
-        onComplete: () => text.destroy()
+        onComplete: () => {
+          if (text && text.destroy) {
+            text.destroy();
+          }
+        }
       });
     } catch (error) {
       console.error('Error creating level up effect:', error);
@@ -768,17 +811,21 @@ export class PlayScene extends BaseScene {
    * Increase game difficulty over time
    */
   increaseDifficulty() {
-    // Increase enemy spawn rate
-    const newDelay = Math.max(500, this.enemySpawnRate - 100);
-    if (newDelay !== this.enemySpawnRate) {
-      this.enemySpawnRate = newDelay;
-      if (this.enemySpawnTimer) {
-        this.enemySpawnTimer.delay = this.enemySpawnRate;
+    try {
+      // Increase enemy spawn rate
+      const newDelay = Math.max(500, this.enemySpawnRate - 100);
+      if (newDelay !== this.enemySpawnRate) {
+        this.enemySpawnRate = newDelay;
+        if (this.enemySpawnTimer) {
+          this.enemySpawnTimer.delay = this.enemySpawnRate;
+        }
       }
+      
+      // Increase enemy speed
+      this.enemyBaseSpeed = Math.min(200, this.enemyBaseSpeed + 5);
+    } catch (error) {
+      console.error('Error increasing difficulty:', error);
     }
-    
-    // Increase enemy speed
-    this.enemyBaseSpeed = Math.min(200, this.enemyBaseSpeed + 5);
   }
 
   /**
@@ -838,11 +885,15 @@ export class PlayScene extends BaseScene {
       .on('pointerover', () => restartButton.setStyle({ fill: '#ff00ff' }))
       .on('pointerout', () => restartButton.setStyle({ fill: '#00ff00' }))
       .on('pointerdown', () => this.scene.restart());
+      
+      // Add keyboard restart option
+      this.input.keyboard.once('keydown-R', () => {
+        this.scene.restart();
+      });
     } catch (error) {
       console.error('Error showing game over screen:', error);
-      
-      // Fallback restart option
-      this.input.keyboard.once('keydown-R', () => {
+      // Force restart after a delay if game over screen fails
+      this.time.delayedCall(3000, () => {
         this.scene.restart();
       });
     }
