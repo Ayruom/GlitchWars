@@ -474,11 +474,18 @@ export class PlayScene extends BaseScene {
       try {
         if (!enemy.active || !this.player.active) return;
         
-        // Calculate distance to player
+        // Calculate distance and position relative to player
         const distance = Phaser.Math.Distance.Between(
           enemy.x, enemy.y,
           this.player.x, this.player.y
         );
+        
+        // Update sprite based on position relative to player
+        if (enemy.x < this.player.x) {
+          enemy.setTexture('enemyRight');
+        } else {
+          enemy.setTexture('enemyLeft');
+        }
         
         // Dynamic speed based on distance (faster when further away)
         const baseSpeed = enemy.baseSpeed || this.enemyBaseSpeed;
@@ -490,7 +497,7 @@ export class PlayScene extends BaseScene {
         // Update enemy direction to follow player
         this.physics.moveToObject(enemy, this.player, speed);
       } catch (error) {
-        // Skip this enemy if there's an error updating it
+        console.error('Error updating enemy:', error);
       }
     });
   }
@@ -540,29 +547,53 @@ export class PlayScene extends BaseScene {
       const side = Math.floor(Math.random() * 4);
       const buffer = 40;
       let x, y;
+      let spriteKey;
       
       switch(side) {
-        case 0: x = Phaser.Math.Between(0, this.config.width); y = -buffer; break;
-        case 1: x = this.config.width + buffer; y = Phaser.Math.Between(0, this.config.height); break;
-        case 2: x = Phaser.Math.Between(0, this.config.width); y = this.config.height + buffer; break;
-        case 3: x = -buffer; y = Phaser.Math.Between(0, this.config.height); break;
+        case 0: // top
+          x = Phaser.Math.Between(0, this.config.width);
+          y = -buffer;
+          // Compare with player's x position to determine facing
+          spriteKey = (x < this.player.x) ? 'enemyRight' : 'enemyLeft';
+          break;
+        case 1: // right
+          x = this.config.width + buffer;
+          y = Phaser.Math.Between(0, this.config.height);
+          spriteKey = 'enemyLeft'; // Always face left when spawning from right
+          break;
+        case 2: // bottom
+          x = Phaser.Math.Between(0, this.config.width);
+          y = this.config.height + buffer;
+          // Compare with player's x position to determine facing
+          spriteKey = (x < this.player.x) ? 'enemyRight' : 'enemyLeft';
+          break;
+        case 3: // left
+          x = -buffer;
+          y = Phaser.Math.Between(0, this.config.height);
+          spriteKey = 'enemyRight'; // Always face right when spawning from left
+          break;
       }
       
-      const enemy = this.add.rectangle(x, y, 20, 20, 0xff0000);
+      // Create enemy sprite using the determined facing direction
+      const enemy = this.physics.add.sprite(x, y, spriteKey);
+      enemy.setDisplaySize(40, 40);
       this.physics.add.existing(enemy);
       this.enemies.add(enemy);
       
+      // Store initial spawn side to update texture later if needed
+      enemy.spawnSide = side;
+      
       // Enhanced enemy scaling with wave and level
-      const waveScaling = this.wave * 8; // More health per wave
-      const levelScaling = this.level * 3; // More health per level
+      const waveScaling = this.wave * 8;
+      const levelScaling = this.level * 3;
       enemy.maxHealth = this.enemyBaseHealth + waveScaling + levelScaling;
       enemy.currentHealth = enemy.maxHealth;
       
       // Enhanced enemy properties scaling
-      const speedScaling = 1 + (this.wave * 0.1) + (this.level * 0.05); // Speed increases with progress
+      const speedScaling = 1 + (this.wave * 0.1) + (this.level * 0.05);
       enemy.baseSpeed = this.enemyBaseSpeed * speedScaling * (0.8 + Math.random() * 0.4);
-      enemy.damage = 5 + Math.floor(this.wave * 1.5) + Math.floor(this.level * 0.5); // More damage as game progresses
-      enemy.value = 10 + Math.floor(this.wave * 2); // More points for higher waves
+      enemy.damage = 5 + Math.floor(this.wave * 1.5) + Math.floor(this.level * 0.5);
+      enemy.value = 10 + Math.floor(this.wave * 2);
       
       this.createEnemyHealthBar(enemy);
       this.physics.moveToObject(enemy, this.player, enemy.baseSpeed);
