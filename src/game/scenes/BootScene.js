@@ -47,7 +47,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     // Load all necessary game assets
-    this.load.image("background", "/assets/scanline.png"); // Fallback to scanline as background
+    this.load.image("background", "/assets/scanline.png");
 
     // Hero character sprites
     this.load.spritesheet("knight", "/assets/swordsman.png", {
@@ -63,11 +63,9 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 32,
     });
 
-    // Enemy sprites
-    this.load.spritesheet("enemy", "/assets/enemy.png", {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
+    // Enemy sprites - load both facing directions
+    this.load.image("enemyRight", "/assets/Enemy40X40rightFacing.png");
+    this.load.image("enemyLeft", "/assets/Enemy40X40LeftFacing.png");
 
     // UI elements
     this.load.image("button", "/assets/button.png");
@@ -75,11 +73,18 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     // Create placeholder graphics for missing assets
-    if (!this.textures.exists("enemy")) {
-      const enemyGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-      enemyGraphics.fillStyle(0xff0000);
-      enemyGraphics.fillRect(0, 0, 32, 32);
-      enemyGraphics.generateTexture("enemy", 32, 32);
+    if (!this.textures.exists("enemyRight")) {
+      const enemyRightGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      enemyRightGraphics.fillStyle(0xff0000);
+      enemyRightGraphics.fillRect(0, 0, 32, 32);
+      enemyRightGraphics.generateTexture("enemyRight", 32, 32);
+    }
+
+    if (!this.textures.exists("enemyLeft")) {
+      const enemyLeftGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      enemyLeftGraphics.fillStyle(0xff0000);
+      enemyLeftGraphics.fillRect(0, 0, 32, 32);
+      enemyLeftGraphics.generateTexture("enemyLeft", 32, 32);
     }
 
     if (!this.textures.exists("button")) {
