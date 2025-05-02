@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import './index.css';
 import { MainLayout } from './components/MainLayout';
 import { HeroSection } from './components/HeroSection';
+import { GenderSelectionComponent } from './components/GenderSelectionComponent';
 import { HeroSelectionComponent } from './components/HeroSelectionComponent';
 import { GameFeaturesSection } from './components/GameFeaturesSection';
 import { PixelLootSection } from './components/PixelLootSection';
@@ -24,6 +25,10 @@ const router = createBrowserRouter([
             <PixelLootSection />
           </>
         ),
+      },
+      {
+        path: 'select-gender',
+        element: <GenderSelectionComponent />,
       },
       {
         path: 'select-hero',
