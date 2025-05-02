@@ -5,7 +5,7 @@ export function HeroSection() {
   const navigate = useNavigate();
 
   const handleStartGame = () => {
-    navigate('/select-hero');
+    navigate('/select-gender');
   };
 
   return (

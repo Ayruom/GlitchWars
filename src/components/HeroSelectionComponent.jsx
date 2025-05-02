@@ -1,23 +1,39 @@
 // src/components/HeroSelectionComponent.jsx
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 
 export function HeroSelectionComponent() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedHero, setSelectedHero] = useState(null);
+  const selectedGender = location.state?.selectedGender;
+
+  // Redirect if no gender is selected
+  if (!selectedGender) {
+    navigate('/select-gender');
+    return null;
+  }
 
   const heroes = [
-  { id: 'knight', name: 'Pixel Knight', image: '/assets/swordsman.png', type: 'Warrior' },
-  { id: 'mage', name: 'Retro Mage', image: '/assets/wizard.png', type: 'Wizard' },
-  { id: 'archer', name: 'Archer', image: '/assets/archer.png', type: 'Ranger' },
-];
-
-  // Only show heroes that have images
-  const availableHeroes = heroes.filter(hero => {
-    const img = new Image();
-    img.src = hero.image;
-    return img.complete;
-  });
+    {
+      id: 'knight',
+      name: 'Pixel Knight',
+      image: '/assets/swordsman.png',
+      type: 'Warrior'
+    },
+    {
+      id: 'mage',
+      name: 'Retro Mage',
+      image: selectedGender.image, // Use the gender-specific wizard image
+      type: 'Wizard'
+    },
+    {
+      id: 'archer',
+      name: 'Archer',
+      image: '/assets/archer.png',
+      type: 'Ranger'
+    },
+  ];
 
   const selectHero = (hero) => {
     setSelectedHero(hero);
@@ -25,18 +41,23 @@ export function HeroSelectionComponent() {
 
   const startGame = () => {
     if (selectedHero) {
-      // We can pass the selected hero information to the game page
-      // via state in the navigation
-      navigate('/game', { state: { hero: selectedHero } });
+      navigate('/game', { 
+        state: { 
+          hero: {
+            ...selectedHero,
+            gender: selectedGender.id
+          }
+        } 
+      });
     }
   };
 
   return (
     <section className="text-center py-10">
-      {/* 🔙 Back Button */}
+      {/* Back Button */}
       <div className="mb-8">
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/select-gender')}
           className="px-4 py-2 font-pixel bg-green-700 text-white border-2 border-green-500 rounded-md shadow-md transition-all duration-300 ease-in-out hover:bg-green-600 hover:scale-105"
         >
           ← BACK
