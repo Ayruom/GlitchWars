@@ -49,23 +49,19 @@ export class BootScene extends Phaser.Scene {
     // Load all necessary game assets
     this.load.image("background", "/assets/scanline.png");
 
-    // Hero character sprites
-    this.load.spritesheet("knight", "/assets/swordsman.png", {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet("mage", "/assets/wizard.png", {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet("archer", "/assets/archer.png", {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
+    // Hero character sprites - Male
+    this.load.image("wizard_male_1", "/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png");
+    this.load.image("wizard_male_2", "/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male2 60X60.png");
+    this.load.image("wizard_male_3", "/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male3 64X64.png");
+    
+    // Hero character sprites - Female
+    this.load.image("wizard_female_1", "/assets/WizardsInGameImages/Female/FinalPlayUse/Wizard Female1 60X60.png");
+    this.load.image("wizard_female_2", "/assets/WizardsInGameImages/Female/FinalPlayUse/Wizard Female2 60X60.png");
+    this.load.image("archer_female", "/assets/ArchersInGameImages/Female/FinalPlayUse/Archer Female 64X64.png");
 
     // Enemy sprites - load both facing directions
-    this.load.image("enemyRight", "/assets/Enemy40X40rightFacing.png");
-    this.load.image("enemyLeft", "/assets/Enemy40X40LeftFacing.png");
+    this.load.image("enemyRight", "/assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40rightFacing.png");
+    this.load.image("enemyLeft", "/assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40LeftFacing.png");
 
     // UI elements
     this.load.image("button", "/assets/button.png");
@@ -93,10 +89,33 @@ export class BootScene extends Phaser.Scene {
       buttonGraphics.fillRect(0, 0, 64, 32);
       buttonGraphics.generateTexture("button", 64, 32);
     }
-    // Animation definitions for our sprites
-    this.createAnimations();
+    
+    // Create placeholder for missing hero assets
+    // Male placeholders
+    this.createPlaceholderIfMissing("wizard_male_1", 0x0000ff);
+    this.createPlaceholderIfMissing("wizard_male_2", 0x0000ff);
+    this.createPlaceholderIfMissing("wizard_male_3", 0x0000ff);
+    
+    // Female placeholders
+    this.createPlaceholderIfMissing("wizard_female_1", 0xff00ff);
+    this.createPlaceholderIfMissing("wizard_female_2", 0xff00ff);
+    this.createPlaceholderIfMissing("archer_female", 0xff00ff);
 
     this.scene.start("MenuScene");
+  }
+
+  /**
+   * Create a placeholder graphic if the texture doesn't exist
+   * @param {string} key - The texture key to check
+   * @param {number} color - The color to use for the placeholder
+   */
+  createPlaceholderIfMissing(key, color = 0x00ff00) {
+    if (!this.textures.exists(key)) {
+      const placeholder = this.make.graphics({ x: 0, y: 0, add: false });
+      placeholder.fillStyle(color);
+      placeholder.fillRect(0, 0, 60, 60);
+      placeholder.generateTexture(key, 60, 60);
+    }
   }
 
   createAnimations() {
