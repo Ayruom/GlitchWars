@@ -9,12 +9,12 @@ export function GenderSelectionComponent() {
     {
       id: 'male',
       label: 'Male',
-      image: '/assets/Wizards/Male wizard No Backround.png'
+      image: '/assets/GenderSelectionScreenImages/Male wizard No Backround.png'
     },
     {
       id: 'female',
       label: 'Female',
-      image: '/assets/Wizards/No Background Wizard Female.png'
+      image: '/assets/GenderSelectionScreenImages/No Background Wizard Female.png'
     }
   ];
 
