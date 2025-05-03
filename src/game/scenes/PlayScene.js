@@ -50,6 +50,23 @@ export class PlayScene extends BaseScene {
     // Score settings
     this.baseScoreToLevel = 200; // Base score needed to level up
     this.levelScoreMultiplier = 1.5; // Score requirement increases by 50% each level
+    
+    // Hero image mapping - maps hero IDs from selection to in-game sprites
+    this.heroImageMapping = {
+      male: {
+        mage1: '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png',
+        mage2: '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male2 60X60.png',
+        mage3: '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male3 64X64.png',
+        knight: null, // TBD
+        archer: null  // TBD
+      },
+      female: {
+        mage1: '/assets/WizardsInGameImages/Female/FinalPlayUse/Wizard Female1 60X60.png',
+        mage2: '/assets/WizardsInGameImages/Female/FinalPlayUse/Wizard Female2 60X60.png',
+        archer: '/assets/ArchersInGameImages/Female/FinalPlayUse/Archer Female 64X64.png',
+        knight: null  // TBD
+      }
+    };
   }
 
   /**
@@ -57,7 +74,7 @@ export class PlayScene extends BaseScene {
    * @param {Object} data - Data passed from previous scene
    */
   init(data) {
-    this.selectedHero = data.hero || { id: 'knight', name: 'Pixel Knight' };
+    this.selectedHero = data.hero || { id: 'mage1', name: 'Retro Mage I', gender: 'male' };
     this.score = 0;
     this.level = 1;
     this.wave = 1;
@@ -74,8 +91,12 @@ export class PlayScene extends BaseScene {
         .setOrigin(0)
         .setDepth(-1);
       
-      // Pre-load the wizard image first
-      this.load.image('playerCharacter', '/assets/Wizards/Male/Wizard Male2 60X60.png');
+      // Get the appropriate hero image path
+      const heroImageKey = 'playerCharacter';
+      let heroImagePath = this.getHeroImagePath();
+      
+      // Pre-load the hero image
+      this.load.image(heroImageKey, heroImagePath);
       
       // Once the image is loaded, set up the game elements
       this.load.once('complete', () => {
@@ -93,6 +114,33 @@ export class PlayScene extends BaseScene {
       console.error('Error in PlayScene.create:', error);
       // Create minimal fallback UI to show something
       this.createFallbackUI();
+    }
+  }
+
+  /**
+   * Get the correct hero image path based on selection
+   * @returns {string} path to the hero image
+   */
+  getHeroImagePath() {
+    // Get hero gender and id from selection
+    const { gender, id } = this.selectedHero;
+    
+    // Get the image path from our mapping
+    const imagePath = this.heroImageMapping[gender]?.[id];
+    
+    // Return the image path or a default if not found
+    if (imagePath) {
+      return imagePath;
+    } else {
+      console.warn(`No image found for hero: ${id} with gender: ${gender}. Using default.`);
+      // Return first available image as fallback
+      const fallbackGender = gender || 'male';
+      const fallbackHeroMapping = this.heroImageMapping[fallbackGender];
+      const firstAvailableHero = Object.keys(fallbackHeroMapping).find(key => 
+        fallbackHeroMapping[key] !== null
+      );
+      
+      return fallbackHeroMapping[firstAvailableHero] || '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png';
     }
   }
 
@@ -127,18 +175,20 @@ export class PlayScene extends BaseScene {
    */
   createPlayer() {
     try {
-      // Create the player using the wizard sprite
-      this.player = this.add.sprite(
+      // Create the player using the selected hero sprite
+      this.player = this.physics.add.sprite(
         this.config.width / 2,
         this.config.height / 2,
         'playerCharacter'
       );
       
       // Set the size of the player sprite
-      this.player.setDisplaySize(60, 60);
+      // Use different sizes based on hero type if needed
+      const spriteSize = this.getSpriteSize();
+      this.player.setDisplaySize(spriteSize.width, spriteSize.height);
       
       // Add physics to the sprite
-      this.physics.add.existing(this.player);
+      this.physics.world.enable(this.player);
       
       // Set world bounds collision
       this.player.body.collideWorldBounds = true;
@@ -152,6 +202,26 @@ export class PlayScene extends BaseScene {
       // Fallback to a rectangle if image loading fails
       this.createFallbackPlayer();
     }
+  }
+  
+  /**
+   * Get appropriate sprite size based on hero type
+   * @returns {Object} width and height
+   */
+  getSpriteSize() {
+    const { id } = this.selectedHero;
+    
+    // Default size
+    const defaultSize = { width: 60, height: 60 };
+    
+    // Customize sizes based on hero type if needed
+    if (id === 'archer') {
+      return { width: 64, height: 64 };
+    } else if (id === 'mage3') {
+      return { width: 64, height: 64 };
+    }
+    
+    return defaultSize;
   }
   
   /**
