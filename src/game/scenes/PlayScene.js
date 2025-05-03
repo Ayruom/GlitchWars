@@ -190,6 +190,9 @@ export class PlayScene extends BaseScene {
       // Add physics to the sprite
       this.physics.world.enable(this.player);
       
+      // Important: Set origin to the center for proper flipping
+      this.player.setOrigin(0.5, 0.5);
+      
       // Set world bounds collision
       this.player.body.collideWorldBounds = true;
       
@@ -197,6 +200,9 @@ export class PlayScene extends BaseScene {
       this.player.maxHealth = this.playerMaxHealth;
       this.player.currentHealth = this.playerCurrentHealth;
       this.player.invulnerable = false;
+      
+      // Set initial direction (facing right)
+      this.player.facingRight = true;
     } catch (error) {
       console.error('Error creating player:', error);
       // Fallback to a rectangle if image loading fails
@@ -557,11 +563,29 @@ export class PlayScene extends BaseScene {
     // Reset velocity
     this.player.body.setVelocity(0);
     
+    const wasFlipped = !this.player.facingRight;
+    
     // Horizontal movement (prioritize WASD then arrow keys)
     if (this.wasd.left.isDown || this.cursors.left.isDown) {
       this.player.body.setVelocityX(-this.playerSpeed);
+      
+      // Flip sprite horizontally when moving left
+      if (this.player.facingRight) {
+        this.player.facingRight = false;
+        this.player.scaleX = -1; // Flip sprite by setting negative scale
+        // Maintain the physics body's correct position
+        this.player.body.offset.x = this.player.width;
+      }
     } else if (this.wasd.right.isDown || this.cursors.right.isDown) {
       this.player.body.setVelocityX(this.playerSpeed);
+      
+      // Reset sprite to normal when moving right
+      if (!this.player.facingRight) {
+        this.player.facingRight = true;
+        this.player.scaleX = 1; // Normal scale
+        // Reset the physics body offset
+        this.player.body.offset.x = 0;
+      }
     }
     
     // Vertical movement (prioritize WASD then arrow keys)
