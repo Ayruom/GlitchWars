@@ -74,13 +74,21 @@ export class PlayScene extends BaseScene {
         .setOrigin(0)
         .setDepth(-1);
       
-      // Create other game elements
-      this.createPlayer();
-      this.setupEnemies();
-      this.createUI();
-      this.createHealthBars();
-      this.setupInput();
-      this.startGameLoop();
+      // Pre-load the wizard image first
+      this.load.image('playerCharacter', '/assets/Wizards/Male/Wizard Male2 60X60.png');
+      
+      // Once the image is loaded, set up the game elements
+      this.load.once('complete', () => {
+        this.createPlayer();
+        this.setupEnemies();
+        this.createUI();
+        this.createHealthBars();
+        this.setupInput();
+        this.startGameLoop();
+      });
+      
+      // Start the loader
+      this.load.start();
     } catch (error) {
       console.error('Error in PlayScene.create:', error);
       // Create minimal fallback UI to show something
@@ -119,15 +127,17 @@ export class PlayScene extends BaseScene {
    */
   createPlayer() {
     try {
-      // Create a green rectangle as the player
-      this.player = this.add.rectangle(
+      // Create the player using the wizard sprite
+      this.player = this.add.sprite(
         this.config.width / 2,
         this.config.height / 2,
-        30, 30,
-        0x00ff00
+        'playerCharacter'
       );
       
-      // Add physics to the rectangle
+      // Set the size of the player sprite
+      this.player.setDisplaySize(60, 60);
+      
+      // Add physics to the sprite
       this.physics.add.existing(this.player);
       
       // Set world bounds collision
@@ -139,7 +149,33 @@ export class PlayScene extends BaseScene {
       this.player.invulnerable = false;
     } catch (error) {
       console.error('Error creating player:', error);
+      // Fallback to a rectangle if image loading fails
+      this.createFallbackPlayer();
     }
+  }
+  
+  /**
+   * Create a fallback player if the image loading fails
+   */
+  createFallbackPlayer() {
+    // Create a green rectangle as the player (fallback)
+    this.player = this.add.rectangle(
+      this.config.width / 2,
+      this.config.height / 2,
+      30, 30,
+      0x00ff00
+    );
+    
+    // Add physics to the rectangle
+    this.physics.add.existing(this.player);
+    
+    // Set world bounds collision
+    this.player.body.collideWorldBounds = true;
+    
+    // Add health properties as direct properties of the player
+    this.player.maxHealth = this.playerMaxHealth;
+    this.player.currentHealth = this.playerCurrentHealth;
+    this.player.invulnerable = false;
   }
 
   /**
