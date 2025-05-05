@@ -572,7 +572,7 @@ export class PlayScene extends BaseScene {
       if (!this.player) return;
       
       // If this is the fallback player (not using Player class)
-      if (!this.player.takeDamage) {
+      if (typeof this.player.takeDamage !== 'function') {
         // Skip if player is invulnerable
         if (this.player.invulnerable) return;
         
@@ -732,7 +732,35 @@ export class PlayScene extends BaseScene {
    */
   createLevelUpEffect() {
     try {
-      if (!this.player || !this.player.sprite) return;
+      if (!this.player || !this.player.sprite) {  
+        console.warn('Player or player sprite is missing. Level-up effect cannot be created.');  
+        // Fallback: Display a generic level-up message at the center of the screen  
+        const fallbackText = this.add.text(  
+          this.cameras.main.centerX,  
+          this.cameras.main.centerY - 50,  
+          'LEVEL UP!',  
+          {  
+            fontSize: '24px',  
+            fill: '#00ff00',  
+            stroke: '#000',  
+            strokeThickness: 4  
+          }  
+        ).setOrigin(0.5);  
+        
+        this.tweens.add({  
+          targets: fallbackText,  
+          y: fallbackText.y - 30,  
+          alpha: 0,  
+          duration: 1500,  
+          ease: 'Power2',  
+          onComplete: () => {  
+            if (fallbackText && fallbackText.destroy) {  
+              fallbackText.destroy();  
+            }  
+          }  
+        });  
+        return;  
+      }  
       
       const text = this.add.text(
         this.player.sprite.x,
