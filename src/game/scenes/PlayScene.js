@@ -1,5 +1,6 @@
 import { BaseScene } from './BaseScene';
 import Phaser from 'phaser';
+import { Player } from '../entities/Player';
 
 export class PlayScene extends BaseScene {
   constructor(config) {
@@ -175,59 +176,23 @@ export class PlayScene extends BaseScene {
    */
   createPlayer() {
     try {
-      // Create the player using the selected hero sprite
-      this.player = this.physics.add.sprite(
-        this.config.width / 2,
-        this.config.height / 2,
-        'playerCharacter'
-      );
+      // Create the player using the Player class with appropriate configuration
+      this.player = new Player(this, this.config.width / 2, this.config.height / 2, {
+        spriteKey: 'playerCharacter',
+        maxHealth: this.playerMaxHealth,
+        currentHealth: this.playerCurrentHealth,
+        speed: this.playerSpeed,
+        hero: this.selectedHero
+      });
       
-      // Set the size of the player sprite
-      // Use different sizes based on hero type if needed
-      const spriteSize = this.getSpriteSize();
-      this.player.setDisplaySize(spriteSize.width, spriteSize.height);
-      
-      // Add physics to the sprite
-      this.physics.world.enable(this.player);
-      
-      // Important: Set origin to the center for proper flipping
-      this.player.setOrigin(0.5, 0.5);
-      
-      // Set world bounds collision
-      this.player.body.collideWorldBounds = true;
-      
-      // Add health properties as direct properties of the player
-      this.player.maxHealth = this.playerMaxHealth;
-      this.player.currentHealth = this.playerCurrentHealth;
-      this.player.invulnerable = false;
-      
-      // Set initial direction (facing right)
-      this.player.facingRight = true;
+      // Update scene properties to match player's properties for UI consistency
+      this.playerCurrentHealth = this.player.currentHealth;
+      this.playerMaxHealth = this.player.maxHealth;
     } catch (error) {
       console.error('Error creating player:', error);
       // Fallback to a rectangle if image loading fails
       this.createFallbackPlayer();
     }
-  }
-  
-  /**
-   * Get appropriate sprite size based on hero type
-   * @returns {Object} width and height
-   */
-  getSpriteSize() {
-    const { id } = this.selectedHero;
-    
-    // Default size
-    const defaultSize = { width: 60, height: 60 };
-    
-    // Customize sizes based on hero type if needed
-    if (id === 'archer') {
-      return { width: 64, height: 64 };
-    } else if (id === 'mage3') {
-      return { width: 64, height: 64 };
-    }
-    
-    return defaultSize;
   }
   
   /**
@@ -261,9 +226,9 @@ export class PlayScene extends BaseScene {
     // Create enemy group with physics
     this.enemies = this.physics.add.group();
     
-    // Add collision detection between player and enemies
+    // Add collision detection between player sprite and enemies
     this.physics.add.collider(
-      this.player, 
+      this.player.sprite, 
       this.enemies, 
       this.handlePlayerEnemyCollision, 
       null, 
@@ -413,9 +378,11 @@ export class PlayScene extends BaseScene {
    */
   update(time, delta) {
     try {
-      if (!this.player || !this.player.body) return;
+      if (!this.player) return;
       
-      this.handlePlayerMovement();
+      // Use Player class's update method
+      this.player.update();
+      
       this.updateEnemies();
       this.updateHealthBars();
       this.cleanupOffscreenEnemies();
@@ -558,42 +525,8 @@ export class PlayScene extends BaseScene {
    * Handle player movement based on input
    */
   handlePlayerMovement() {
-    if (!this.player || !this.player.body) return;
-    
-    // Reset velocity
-    this.player.body.setVelocity(0);
-    
-    const wasFlipped = !this.player.facingRight;
-    
-    // Horizontal movement (prioritize WASD then arrow keys)
-    if (this.wasd.left.isDown || this.cursors.left.isDown) {
-      this.player.body.setVelocityX(-this.playerSpeed);
-      
-      // Flip sprite horizontally when moving left
-      if (this.player.facingRight) {
-        this.player.facingRight = false;
-        this.player.scaleX = -1; // Flip sprite by setting negative scale
-        // Maintain the physics body's correct position
-        this.player.body.offset.x = this.player.width;
-      }
-    } else if (this.wasd.right.isDown || this.cursors.right.isDown) {
-      this.player.body.setVelocityX(this.playerSpeed);
-      
-      // Reset sprite to normal when moving right
-      if (!this.player.facingRight) {
-        this.player.facingRight = true;
-        this.player.scaleX = 1; // Normal scale
-        // Reset the physics body offset
-        this.player.body.offset.x = 0;
-      }
-    }
-    
-    // Vertical movement (prioritize WASD then arrow keys)
-    if (this.wasd.up.isDown || this.cursors.up.isDown) {
-      this.player.body.setVelocityY(-this.playerSpeed);
-    } else if (this.wasd.down.isDown || this.cursors.down.isDown) {
-      this.player.body.setVelocityY(this.playerSpeed);
-    }
+    // This method is now handled by the Player class's handleMovement method
+    // We keep this method as a no-op for backward compatibility
   }
 
   /**
@@ -602,16 +535,18 @@ export class PlayScene extends BaseScene {
   updateEnemies() {
     this.enemies.getChildren().forEach(enemy => {
       try {
-        if (!enemy.active || !this.player.active) return;
+        if (!enemy.active || !this.player || !this.player.sprite || !this.player.sprite.active) return;
+
+        const playerSprite = this.player.sprite; // Cache player sprite
         
         // Calculate distance and position relative to player
         const distance = Phaser.Math.Distance.Between(
           enemy.x, enemy.y,
-          this.player.x, this.player.y
+          playerSprite.x, playerSprite.y
         );
         
         // Update sprite based on position relative to player
-        if (enemy.x < this.player.x) {
+        if (enemy.x < playerSprite.x) {
           enemy.setTexture('enemyRight');
         } else {
           enemy.setTexture('enemyLeft');
@@ -625,7 +560,7 @@ export class PlayScene extends BaseScene {
         const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
         
         // Update enemy direction to follow player
-        this.physics.moveToObject(enemy, this.player, speed);
+        this.physics.moveToObject(enemy, this.player.sprite, speed);
       } catch (error) {
         console.error('Error updating enemy:', error);
       }
@@ -666,7 +601,7 @@ export class PlayScene extends BaseScene {
    */
   spawnEnemy() {
     try {
-      if (!this.enemies) return;
+      if (!this.enemies || !this.player || !this.player.sprite) return;
       
       // Limit maximum number of enemies for performance
       if (this.enemies.getChildren().length >= this.maxEnemies) {
@@ -684,7 +619,7 @@ export class PlayScene extends BaseScene {
           x = Phaser.Math.Between(0, this.config.width);
           y = -buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.player.x) ? 'enemyRight' : 'enemyLeft';
+          spriteKey = (x < this.player.sprite.x) ? 'enemyRight' : 'enemyLeft';
           break;
         case 1: // right
           x = this.config.width + buffer;
@@ -695,7 +630,7 @@ export class PlayScene extends BaseScene {
           x = Phaser.Math.Between(0, this.config.width);
           y = this.config.height + buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.player.x) ? 'enemyRight' : 'enemyLeft';
+          spriteKey = (x < this.player.sprite.x) ? 'enemyRight' : 'enemyLeft';
           break;
         case 3: // left
           x = -buffer;
@@ -726,7 +661,7 @@ export class PlayScene extends BaseScene {
       enemy.value = 10 + Math.floor(this.wave * 2);
       
       this.createEnemyHealthBar(enemy);
-      this.physics.moveToObject(enemy, this.player, enemy.baseSpeed);
+      this.physics.moveToObject(enemy, this.player.sprite, enemy.baseSpeed);
     } catch (error) {
       console.error('Error spawning enemy:', error);
     }
@@ -762,15 +697,16 @@ export class PlayScene extends BaseScene {
 
   /**
    * Handle collision between player and enemy
-   * @param {Phaser.GameObjects.Rectangle} player - Player object
-   * @param {Phaser.GameObjects.Rectangle} enemy - Enemy object
+   * @param {Phaser.GameObjects.Rectangle} playerSprite - Player sprite
+  handlePlayerEnemyCollision(enemy) {
    */
-  handlePlayerEnemyCollision(player, enemy) {
+  handlePlayerEnemyCollision(playerSprite, enemy) {
     try {
       const currentTime = this.time.now;
 
-      // Damage the player if not invulnerable
-      if (!player.invulnerable && currentTime - this.lastPlayerDamageTime > this.playerDamageRate) {
+      // Since the collision is with the player sprite, get the player instance
+      // The player object itself has the invulnerable property
+      if (!this.player.invulnerable && currentTime - this.lastPlayerDamageTime > this.playerDamageRate) {
         this.lastPlayerDamageTime = currentTime;
         const baseDamage = enemy.damage || this.enemyContactDamage;
         const levelMultiplier = 1 - (this.level * 0.01);
@@ -799,32 +735,17 @@ export class PlayScene extends BaseScene {
    */
   damagePlayer(amount) {
     try {
-      // Skip if player is invulnerable
-      if (!this.player || this.player.invulnerable) return;
+      // Use the Player class's takeDamage method
+      if (!this.player) return;
       
-      // Apply damage
-      this.playerCurrentHealth = Math.max(0, this.playerCurrentHealth - amount);
-      this.player.currentHealth = this.playerCurrentHealth;
+      // Apply damage using the Player class method
+      const died = this.player.takeDamage(amount);
       
-      // Visual feedback - red flash
-      // We'll use a fill color change for the rectangle instead of tinting
-      const originalColor = this.player.fillColor;
-      this.player.fillColor = 0xff0000;
-      
-      // Make player temporarily invulnerable
-      this.player.invulnerable = true;
-      
-      // Reset after invulnerability period
-      this.time.delayedCall(1000, () => {
-        if (this.player && this.player.active) {
-          // Reset the color
-          this.player.fillColor = 0x00ff00; // Back to green
-          this.player.invulnerable = false;
-        }
-      });
+      // Update the scene's health tracking for UI
+      this.playerCurrentHealth = this.player.currentHealth;
       
       // Check for game over
-      if (this.playerCurrentHealth <= 0) {
+      if (died || this.playerCurrentHealth <= 0) {
         this.gameOver();
       }
     } catch (error) {
@@ -1037,9 +958,11 @@ export class PlayScene extends BaseScene {
    */
   createLevelUpEffect() {
     try {
+      if (!this.player || !this.player.sprite) return;
+      
       const text = this.add.text(
-        this.player.x,
-        this.player.y - 50,
+        this.player.sprite.x,
+        this.player.sprite.y - 50,
         'LEVEL UP!',
         {
           fontSize: '24px',
