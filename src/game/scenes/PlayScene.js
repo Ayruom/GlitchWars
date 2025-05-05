@@ -536,15 +536,17 @@ export class PlayScene extends BaseScene {
     this.enemies.getChildren().forEach(enemy => {
       try {
         if (!enemy.active || !this.player || !this.player.sprite || !this.player.sprite.active) return;
+
+        const playerSprite = this.player.sprite; // Cache player sprite
         
         // Calculate distance and position relative to player
         const distance = Phaser.Math.Distance.Between(
           enemy.x, enemy.y,
-          this.player.sprite.x, this.player.sprite.y
+          playerSprite.x, playerSprite.y
         );
         
         // Update sprite based on position relative to player
-        if (enemy.x < this.player.sprite.x) {
+        if (enemy.x < playerSprite.x) {
           enemy.setTexture('enemyRight');
         } else {
           enemy.setTexture('enemyLeft');
@@ -696,7 +698,7 @@ export class PlayScene extends BaseScene {
   /**
    * Handle collision between player and enemy
    * @param {Phaser.GameObjects.Rectangle} playerSprite - Player sprite
-   * @param {Phaser.GameObjects.Rectangle} enemy - Enemy object
+  handlePlayerEnemyCollision(enemy) {
    */
   handlePlayerEnemyCollision(playerSprite, enemy) {
     try {
