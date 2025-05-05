@@ -572,7 +572,8 @@ export class PlayScene extends BaseScene {
       if (!this.player) return;
       
       // If this is the fallback player (not using Player class)
-      if (typeof this.player.takeDamage !== 'function') {
+      if (!this.player.takeDamage) {
+        console.warn('Player missing takeDamage method - using fallback damage handling');
         // Skip if player is invulnerable
         if (this.player.invulnerable) return;
         
