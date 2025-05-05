@@ -1,6 +1,7 @@
 import { BaseScene } from './BaseScene';
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
+import { EnemyManager } from '../managers/EnemyManager';
 
 export class PlayScene extends BaseScene {
   constructor(config) {
@@ -26,6 +27,7 @@ export class PlayScene extends BaseScene {
     
     // Game objects
     this.enemies = null;
+    this.enemyManager = null;
     
     // UI elements
     this.scoreText = null;
@@ -102,10 +104,7 @@ export class PlayScene extends BaseScene {
       // Once the image is loaded, set up the game elements
       this.load.once('complete', () => {
         this.createPlayer();
-        this.setupEnemies();
-        this.createUI();
-        this.createHealthBars();
-        this.setupInput();
+        this.setupGameElements();
         this.startGameLoop();
       });
       
@@ -116,6 +115,16 @@ export class PlayScene extends BaseScene {
       // Create minimal fallback UI to show something
       this.createFallbackUI();
     }
+  }
+
+  /**
+   * Setup all game elements after player is created
+   */
+  setupGameElements() {
+    this.setupEnemies();
+    this.createUI();
+    this.createHealthBars();
+    this.setupInput();
   }
 
   /**
@@ -176,23 +185,59 @@ export class PlayScene extends BaseScene {
    */
   createPlayer() {
     try {
-      // Create the player using the Player class with appropriate configuration
-      this.player = new Player(this, this.config.width / 2, this.config.height / 2, {
-        spriteKey: 'playerCharacter',
-        maxHealth: this.playerMaxHealth,
-        currentHealth: this.playerCurrentHealth,
-        speed: this.playerSpeed,
-        hero: this.selectedHero
-      });
+      // Create the player using the selected hero sprite
+      this.player = this.physics.add.sprite(
+        this.config.width / 2,
+        this.config.height / 2,
+        'playerCharacter'
+      );
       
-      // Update scene properties to match player's properties for UI consistency
-      this.playerCurrentHealth = this.player.currentHealth;
-      this.playerMaxHealth = this.player.maxHealth;
+      // Set the size of the player sprite
+      // Use different sizes based on hero type if needed
+      const spriteSize = this.getSpriteSize();
+      this.player.setDisplaySize(spriteSize.width, spriteSize.height);
+      
+      // Add physics to the sprite
+      this.physics.world.enable(this.player);
+      
+      // Important: Set origin to the center for proper flipping
+      this.player.setOrigin(0.5, 0.5);
+      
+      // Set world bounds collision
+      this.player.body.collideWorldBounds = true;
+      
+      // Add health properties as direct properties of the player
+      this.player.maxHealth = this.playerMaxHealth;
+      this.player.currentHealth = this.playerCurrentHealth;
+      this.player.invulnerable = false;
+      
+      // Set initial direction (facing right)
+      this.player.facingRight = true;
     } catch (error) {
       console.error('Error creating player:', error);
       // Fallback to a rectangle if image loading fails
       this.createFallbackPlayer();
     }
+  }
+  
+  /**
+   * Get appropriate sprite size based on hero type
+   * @returns {Object} width and height
+   */
+  getSpriteSize() {
+    const { id } = this.selectedHero;
+    
+    // Default size
+    const defaultSize = { width: 60, height: 60 };
+    
+    // Customize sizes based on hero type if needed
+    if (id === 'archer') {
+      return { width: 64, height: 64 };
+    } else if (id === 'mage3') {
+      return { width: 64, height: 64 };
+    }
+    
+    return defaultSize;
   }
   
   /**
@@ -220,20 +265,14 @@ export class PlayScene extends BaseScene {
   }
 
   /**
-   * Setup enemy group and collision detection
+   * Setup enemy group and collision detection using EnemyManager
    */
   setupEnemies() {
-    // Create enemy group with physics
-    this.enemies = this.physics.add.group();
+    // Initialize the enemy manager with current scene
+    this.enemyManager = new EnemyManager(this);
     
-    // Add collision detection between player sprite and enemies
-    this.physics.add.collider(
-      this.player.sprite, 
-      this.enemies, 
-      this.handlePlayerEnemyCollision, 
-      null, 
-      this
-    );
+    // Store a reference to the enemies group
+    this.enemies = this.enemyManager.enemies;
   }
 
   /**
@@ -354,13 +393,8 @@ export class PlayScene extends BaseScene {
    * Start game loop elements like enemy spawning and difficulty scaling
    */
   startGameLoop() {
-    // Start spawning enemies
-    this.enemySpawnTimer = this.time.addEvent({
-      delay: this.enemySpawnRate,
-      callback: this.spawnEnemy,
-      callbackScope: this,
-      loop: true
-    });
+    // Start spawning enemies using the enemy manager
+    this.enemyManager.startSpawning();
     
     // Increase difficulty over time
     this.difficultyTimer = this.time.addEvent({
@@ -378,14 +412,17 @@ export class PlayScene extends BaseScene {
    */
   update(time, delta) {
     try {
-      if (!this.player) return;
+      if (!this.player || !this.player.body) return;
       
       // Use Player class's update method
       this.player.update();
       
-      this.updateEnemies();
+      // Use EnemyManager's update method
+      if (this.enemyManager) {
+        this.enemyManager.update();
+      }
+      
       this.updateHealthBars();
-      this.cleanupOffscreenEnemies();
       this.updateUIPositions();
     } catch (error) {
       console.error('Error in update loop:', error);
@@ -494,28 +531,6 @@ export class PlayScene extends BaseScene {
       
       // Update health text
       this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
-      
-      // Update enemy health bars
-      this.enemies.getChildren().forEach(enemy => {
-        try {
-          if (enemy.healthBar && enemy.currentHealth !== undefined) {
-            const enemyHealthPercent = enemy.currentHealth / enemy.maxHealth;
-            enemy.healthBar.width = Math.max(0, 20 * enemyHealthPercent);
-            
-            // Position the health bar above the enemy
-            enemy.healthBar.x = enemy.x - 10;
-            enemy.healthBar.y = enemy.y - 15;
-            
-            // Position the health bar background
-            if (enemy.healthBarBg) {
-              enemy.healthBarBg.x = enemy.x - 10;
-              enemy.healthBarBg.y = enemy.y - 15;
-            }
-          }
-        } catch (e) {
-          // Skip this enemy if there's an error updating its health bar
-        }
-      });
     } catch (error) {
       console.error('Error updating health bars:', error);
     }
@@ -525,207 +540,41 @@ export class PlayScene extends BaseScene {
    * Handle player movement based on input
    */
   handlePlayerMovement() {
-    // This method is now handled by the Player class's handleMovement method
-    // We keep this method as a no-op for backward compatibility
-  }
-
-  /**
-   * Update enemy behaviors
-   */
-  updateEnemies() {
-    this.enemies.getChildren().forEach(enemy => {
-      try {
-        if (!enemy.active || !this.player || !this.player.sprite || !this.player.sprite.active) return;
-
-        const playerSprite = this.player.sprite; // Cache player sprite
-        
-        // Calculate distance and position relative to player
-        const distance = Phaser.Math.Distance.Between(
-          enemy.x, enemy.y,
-          playerSprite.x, playerSprite.y
-        );
-        
-        // Update sprite based on position relative to player
-        if (enemy.x < playerSprite.x) {
-          enemy.setTexture('enemyRight');
-        } else {
-          enemy.setTexture('enemyLeft');
-        }
-        
-        // Dynamic speed based on distance (faster when further away)
-        const baseSpeed = enemy.baseSpeed || this.enemyBaseSpeed;
-        const minSpeed = baseSpeed * 0.5;
-        const maxSpeed = baseSpeed * 1.2;
-        const speedFactor = Math.min(1, Math.max(0.5, distance / 300));
-        const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
-        
-        // Update enemy direction to follow player
-        this.physics.moveToObject(enemy, this.player.sprite, speed);
-      } catch (error) {
-        console.error('Error updating enemy:', error);
-      }
-    });
-  }
-
-  /**
-   * Clean up enemies that have moved off-screen
-   */
-  cleanupOffscreenEnemies() {
-    try {
-      // Define a larger boundary to avoid premature destruction
-      const buffer = 50;
-      const bounds = {
-        left: -buffer,
-        right: this.config.width + buffer,
-        top: -buffer,
-        bottom: this.config.height + buffer
-      };
+    if (!this.player || !this.player.body) return;
+    
+    // Reset velocity
+    this.player.body.setVelocity(0);
+    
+    const wasFlipped = !this.player.facingRight;
+    
+    // Horizontal movement (prioritize WASD then arrow keys)
+    if (this.wasd.left.isDown || this.cursors.left.isDown) {
+      this.player.body.setVelocityX(-this.playerSpeed);
       
-      this.enemies.getChildren().forEach(enemy => {
-        if (
-          enemy.x < bounds.left ||
-          enemy.x > bounds.right ||
-          enemy.y < bounds.top ||
-          enemy.y > bounds.bottom
-        ) {
-          this.destroyEnemy(enemy);
-        }
-      });
-    } catch (error) {
-      console.error('Error cleaning up enemies:', error);
+      // Flip sprite horizontally when moving left
+      if (this.player.facingRight) {
+        this.player.facingRight = false;
+        this.player.scaleX = -1; // Flip sprite by setting negative scale
+        // Maintain the physics body's correct position
+        this.player.body.offset.x = this.player.width;
+      }
+    } else if (this.wasd.right.isDown || this.cursors.right.isDown) {
+      this.player.body.setVelocityX(this.playerSpeed);
+      
+      // Reset sprite to normal when moving right
+      if (!this.player.facingRight) {
+        this.player.facingRight = true;
+        this.player.scaleX = 1; // Normal scale
+        // Reset the physics body offset
+        this.player.body.offset.x = 0;
+      }
     }
-  }
-
-  /**
-   * Spawn a new enemy at a random location outside the screen
-   */
-  spawnEnemy() {
-    try {
-      if (!this.enemies || !this.player || !this.player.sprite) return;
-      
-      // Limit maximum number of enemies for performance
-      if (this.enemies.getChildren().length >= this.maxEnemies) {
-        return;
-      }
-      
-      // Randomly spawn enemies outside the visible area
-      const side = Math.floor(Math.random() * 4);
-      const buffer = 40;
-      let x, y;
-      let spriteKey;
-      
-      switch(side) {
-        case 0: // top
-          x = Phaser.Math.Between(0, this.config.width);
-          y = -buffer;
-          // Compare with player's x position to determine facing
-          spriteKey = (x < this.player.sprite.x) ? 'enemyRight' : 'enemyLeft';
-          break;
-        case 1: // right
-          x = this.config.width + buffer;
-          y = Phaser.Math.Between(0, this.config.height);
-          spriteKey = 'enemyLeft'; // Always face left when spawning from right
-          break;
-        case 2: // bottom
-          x = Phaser.Math.Between(0, this.config.width);
-          y = this.config.height + buffer;
-          // Compare with player's x position to determine facing
-          spriteKey = (x < this.player.sprite.x) ? 'enemyRight' : 'enemyLeft';
-          break;
-        case 3: // left
-          x = -buffer;
-          y = Phaser.Math.Between(0, this.config.height);
-          spriteKey = 'enemyRight'; // Always face right when spawning from left
-          break;
-      }
-      
-      // Create enemy sprite using the determined facing direction
-      const enemy = this.physics.add.sprite(x, y, spriteKey);
-      enemy.setDisplaySize(40, 40);
-      this.physics.add.existing(enemy);
-      this.enemies.add(enemy);
-      
-      // Store initial spawn side to update texture later if needed
-      enemy.spawnSide = side;
-      
-      // Enhanced enemy scaling with wave and level
-      const waveScaling = this.wave * 8;
-      const levelScaling = this.level * 3;
-      enemy.maxHealth = this.enemyBaseHealth + waveScaling + levelScaling;
-      enemy.currentHealth = enemy.maxHealth;
-      
-      // Enhanced enemy properties scaling
-      const speedScaling = 1 + (this.wave * 0.1) + (this.level * 0.05);
-      enemy.baseSpeed = this.enemyBaseSpeed * speedScaling * (0.8 + Math.random() * 0.4);
-      enemy.damage = 5 + Math.floor(this.wave * 1.5) + Math.floor(this.level * 0.5);
-      enemy.value = 10 + Math.floor(this.wave * 2);
-      
-      this.createEnemyHealthBar(enemy);
-      this.physics.moveToObject(enemy, this.player.sprite, enemy.baseSpeed);
-    } catch (error) {
-      console.error('Error spawning enemy:', error);
-    }
-  }
-
-  /**
-   * Create health bar for an enemy
-   * @param {Phaser.GameObjects.Rectangle} enemy - The enemy to add a health bar to
-   */
-  createEnemyHealthBar(enemy) {
-    try {
-      // Black background for health bar
-      enemy.healthBarBg = this.add.rectangle(
-        enemy.x - 10, 
-        enemy.y - 15, 
-        22, 
-        6, 
-        0x000000
-      );
-      
-      // Yellow health bar at full health
-      enemy.healthBar = this.add.rectangle(
-        enemy.x - 10, 
-        enemy.y - 15, 
-        20, 
-        4, 
-        0xFFFF00 // Yellow color for full health
-      );
-    } catch (error) {
-      console.error('Error creating enemy health bar:', error);
-    }
-  }
-
-  /**
-   * Handle collision between player and enemy
-   * @param {Phaser.GameObjects.Rectangle} playerSprite - Player sprite
-  handlePlayerEnemyCollision(enemy) {
-   */
-  handlePlayerEnemyCollision(playerSprite, enemy) {
-    try {
-      const currentTime = this.time.now;
-
-      // Since the collision is with the player sprite, get the player instance
-      // The player object itself has the invulnerable property
-      if (!this.player.invulnerable && currentTime - this.lastPlayerDamageTime > this.playerDamageRate) {
-        this.lastPlayerDamageTime = currentTime;
-        const baseDamage = enemy.damage || this.enemyContactDamage;
-        const levelMultiplier = 1 - (this.level * 0.01);
-        const finalDamage = Math.max(1, Math.round(baseDamage * levelMultiplier));
-        this.damagePlayer(finalDamage);
-        this.cameras.main.shake(100, 0.01);
-      }
-
-      // Damage the enemy every 5ms of contact
-      if (!enemy.lastDamageTime || currentTime - enemy.lastDamageTime >= 5) {
-        enemy.lastDamageTime = currentTime;
-        if (enemy.currentHealth === undefined) {
-          enemy.currentHealth = enemy.maxHealth || this.enemyBaseHealth;
-        }
-        const damage = (enemy.maxHealth || this.enemyBaseHealth) * 0.1; // 10% of max health
-        this.damageEnemy(enemy, damage);
-      }
-    } catch (error) {
-      console.error('Error in collision handler:', error);
+    
+    // Vertical movement (prioritize WASD then arrow keys)
+    if (this.wasd.up.isDown || this.cursors.up.isDown) {
+      this.player.body.setVelocityY(-this.playerSpeed);
+    } else if (this.wasd.down.isDown || this.cursors.down.isDown) {
+      this.player.body.setVelocityY(this.playerSpeed);
     }
   }
 
@@ -735,117 +584,36 @@ export class PlayScene extends BaseScene {
    */
   damagePlayer(amount) {
     try {
-      // Use the Player class's takeDamage method
-      if (!this.player) return;
+      // Skip if player is invulnerable
+      if (!this.player || this.player.invulnerable) return;
       
-      // Apply damage using the Player class method
-      const died = this.player.takeDamage(amount);
+      // Apply damage
+      this.playerCurrentHealth = Math.max(0, this.playerCurrentHealth - amount);
+      this.player.currentHealth = this.playerCurrentHealth;
       
-      // Update the scene's health tracking for UI
-      this.playerCurrentHealth = this.player.currentHealth;
+      // Visual feedback - red flash
+      // We'll use a fill color change for the rectangle instead of tinting
+      const originalColor = this.player.fillColor;
+      this.player.fillColor = 0xff0000;
+      
+      // Make player temporarily invulnerable
+      this.player.invulnerable = true;
+      
+      // Reset after invulnerability period
+      this.time.delayedCall(1000, () => {
+        if (this.player && this.player.active) {
+          // Reset the color
+          this.player.fillColor = 0x00ff00; // Back to green
+          this.player.invulnerable = false;
+        }
+      });
       
       // Check for game over
-      if (died || this.playerCurrentHealth <= 0) {
+      if (this.playerCurrentHealth <= 0) {
         this.gameOver();
       }
     } catch (error) {
       console.error('Error damaging player:', error);
-    }
-  }
-
-  /**
-   * Damage an enemy
-   * @param {Phaser.GameObjects.Rectangle} enemy - The enemy to damage
-   * @param {number} amount - Damage amount
-   */
-  damageEnemy(enemy, amount) {
-    try {
-      if (!enemy || !enemy.active) return;
-
-      enemy.currentHealth = Math.max(0, enemy.currentHealth - amount);
-
-      // Health bar color: yellow at full, green to red gradient as it decreases
-      const healthPercent = enemy.currentHealth / enemy.maxHealth;
-      let color;
-      if (healthPercent === 1) {
-        color = { r: 255, g: 255, b: 0 }; // Yellow
-      } else {
-        // Green to red gradient
-        color = Phaser.Display.Color.Interpolate.ColorWithColor(
-          { r: 0, g: 255, b: 0 }, // Green
-          { r: 255, g: 0, b: 0 }, // Red
-          100,
-          100 - Math.floor(healthPercent * 100)
-        );
-      }
-      enemy.healthBar.fillColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
-
-      if (enemy.currentHealth <= 0) {
-        this.addScore(enemy.value || 10);
-        this.destroyEnemy(enemy);
-      }
-    } catch (error) {
-      console.error('Error damaging enemy:', error);
-      try {
-        this.destroyEnemy(enemy);
-      } catch (e) {
-        if (enemy && enemy.destroy) {
-          enemy.destroy();
-        }
-      }
-    }
-  }
-
-  /**
-   * Clean up and destroy an enemy with random effects
-   * @param {Phaser.GameObjects.Rectangle} enemy - The enemy to destroy
-   */
-  destroyEnemy(enemy) {
-    try {
-      if (enemy.healthBar) enemy.healthBar.destroy();
-      if (enemy.healthBarBg) enemy.healthBarBg.destroy();
-
-      // Random destruction effect
-      const effectType = Phaser.Math.Between(1, 3);
-      switch (effectType) {
-        case 1: // Pop effect
-          this.tweens.add({
-            targets: enemy,
-            scaleX: 0,
-            scaleY: 0,
-            duration: 300,
-            onComplete: () => enemy.destroy(),
-          });
-          break;
-        case 2: { // Blast effect
-          const blast = this.add.circle(enemy.x, enemy.y, 15, 0xff0000, 0.7);
-          this.tweens.add({
-            targets: blast,
-            alpha: 0,
-            scale: 2,
-            duration: 500,
-            onComplete: () => blast.destroy(),
-          });
-          enemy.destroy();
-          break;
-        }
-        case 3: // Glitch effect
-          this.tweens.add({
-            targets: enemy,
-            x: enemy.x + Phaser.Math.Between(-10, 10),
-            y: enemy.y + Phaser.Math.Between(-10, 10),
-            duration: 100,
-            yoyo: true,
-            repeat: 3,
-            onComplete: () => enemy.destroy(),
-          });
-          break;
-      }
-    } catch (error) {
-      console.error('Error destroying enemy:', error);
-      if (enemy && enemy.destroy) {
-        enemy.destroy();
-      }
     }
   }
 
@@ -946,6 +714,12 @@ export class PlayScene extends BaseScene {
       this.enemySpawnRate = Math.max(500, this.enemySpawnRate - 50);
       this.enemyContactDamage = Math.min(20, this.enemyContactDamage + 1);
       
+      // Update enemy manager with new difficulty
+      if (this.enemyManager) {
+        this.enemyManager.updateDifficulty(this.level, this.wave);
+        this.enemyManager.updateSpawnRate(this.enemySpawnRate);
+      }
+      
       // Create level up effect
       this.createLevelUpEffect();
     } catch (error) {
@@ -958,11 +732,9 @@ export class PlayScene extends BaseScene {
    */
   createLevelUpEffect() {
     try {
-      if (!this.player || !this.player.sprite) return;
-      
       const text = this.add.text(
-        this.player.sprite.x,
-        this.player.sprite.y - 50,
+        this.player.x,
+        this.player.y - 50,
         'LEVEL UP!',
         {
           fontSize: '24px',
@@ -998,13 +770,20 @@ export class PlayScene extends BaseScene {
       const newDelay = Math.max(500, this.enemySpawnRate - 100);
       if (newDelay !== this.enemySpawnRate) {
         this.enemySpawnRate = newDelay;
-        if (this.enemySpawnTimer) {
-          this.enemySpawnTimer.delay = this.enemySpawnRate;
+        
+        // Update enemy manager spawn rate
+        if (this.enemyManager) {
+          this.enemyManager.updateSpawnRate(this.enemySpawnRate);
         }
       }
       
       // Increase enemy speed
       this.enemyBaseSpeed = Math.min(200, this.enemyBaseSpeed + 5);
+      
+      // Update enemy manager
+      if (this.enemyManager) {
+        this.enemyManager.updateDifficulty(this.level, this.wave);
+      }
     } catch (error) {
       console.error('Error increasing difficulty:', error);
     }
@@ -1017,7 +796,13 @@ export class PlayScene extends BaseScene {
     try {
       // Stop physics and game loops
       this.physics.pause();
-      if (this.enemySpawnTimer) this.enemySpawnTimer.remove();
+      
+      // Stop enemy spawning
+      if (this.enemyManager) {
+        this.enemyManager.stopSpawning();
+      }
+      
+      // Remove difficulty timer
       if (this.difficultyTimer) this.difficultyTimer.remove();
       
       // Create centered container for game over elements
