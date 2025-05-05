@@ -185,34 +185,18 @@ export class PlayScene extends BaseScene {
    */
   createPlayer() {
     try {
-      // Create the player using the selected hero sprite
-      this.player = this.physics.add.sprite(
-        this.config.width / 2,
-        this.config.height / 2,
-        'playerCharacter'
-      );
+      // Create the player using the Player class with appropriate configuration
+      this.player = new Player(this, this.config.width / 2, this.config.height / 2, {
+        spriteKey: 'playerCharacter',
+        maxHealth: this.playerMaxHealth,
+        currentHealth: this.playerCurrentHealth,
+        speed: this.playerSpeed,
+        hero: this.selectedHero
+      });
       
-      // Set the size of the player sprite
-      // Use different sizes based on hero type if needed
-      const spriteSize = this.getSpriteSize();
-      this.player.setDisplaySize(spriteSize.width, spriteSize.height);
-      
-      // Add physics to the sprite
-      this.physics.world.enable(this.player);
-      
-      // Important: Set origin to the center for proper flipping
-      this.player.setOrigin(0.5, 0.5);
-      
-      // Set world bounds collision
-      this.player.body.collideWorldBounds = true;
-      
-      // Add health properties as direct properties of the player
-      this.player.maxHealth = this.playerMaxHealth;
-      this.player.currentHealth = this.playerCurrentHealth;
-      this.player.invulnerable = false;
-      
-      // Set initial direction (facing right)
-      this.player.facingRight = true;
+      // Update scene properties to match player's properties for UI consistency
+      this.playerCurrentHealth = this.player.currentHealth;
+      this.playerMaxHealth = this.player.maxHealth;
     } catch (error) {
       console.error('Error creating player:', error);
       // Fallback to a rectangle if image loading fails
@@ -412,7 +396,7 @@ export class PlayScene extends BaseScene {
    */
   update(time, delta) {
     try {
-      if (!this.player || !this.player.body) return;
+      if (!this.player) return;
       
       // Use Player class's update method
       this.player.update();
@@ -584,29 +568,46 @@ export class PlayScene extends BaseScene {
    */
   damagePlayer(amount) {
     try {
-      // Skip if player is invulnerable
-      if (!this.player || this.player.invulnerable) return;
+      // Use the Player class's takeDamage method
+      if (!this.player) return;
       
-      // Apply damage
-      this.playerCurrentHealth = Math.max(0, this.playerCurrentHealth - amount);
-      this.player.currentHealth = this.playerCurrentHealth;
-      
-      // Visual feedback - red flash
-      // We'll use a fill color change for the rectangle instead of tinting
-      const originalColor = this.player.fillColor;
-      this.player.fillColor = 0xff0000;
-      
-      // Make player temporarily invulnerable
-      this.player.invulnerable = true;
-      
-      // Reset after invulnerability period
-      this.time.delayedCall(1000, () => {
-        if (this.player && this.player.active) {
-          // Reset the color
-          this.player.fillColor = 0x00ff00; // Back to green
-          this.player.invulnerable = false;
+      // If this is the fallback player (not using Player class)
+      if (!this.player.takeDamage) {
+        console.warn('Player missing takeDamage method - using fallback damage handling');
+        // Skip if player is invulnerable
+        if (this.player.invulnerable) return;
+        
+        // Apply damage
+        this.playerCurrentHealth = Math.max(0, this.playerCurrentHealth - amount);
+        this.player.currentHealth = this.playerCurrentHealth;
+        
+        // Visual feedback - red flash
+        const originalColor = this.player.fillColor;
+        this.player.fillColor = 0xff0000;
+        
+        // Make player temporarily invulnerable
+        this.player.invulnerable = true;
+        
+        // Reset after invulnerability period
+        this.time.delayedCall(1000, () => {
+          if (this.player && this.player.active) {
+            // Reset the color
+            this.player.fillColor = 0x00ff00; // Back to green
+            this.player.invulnerable = false;
+          }
+        });
+      } else {
+        // Use the Player class's takeDamage method
+        const died = this.player.takeDamage(amount);
+        
+        // Update the scene's health tracking for UI
+        this.playerCurrentHealth = this.player.currentHealth;
+        
+        // Check for game over
+        if (died) {
+          this.gameOver();
         }
-      });
+      }
       
       // Check for game over
       if (this.playerCurrentHealth <= 0) {
@@ -732,9 +733,39 @@ export class PlayScene extends BaseScene {
    */
   createLevelUpEffect() {
     try {
+      if (!this.player || !this.player.sprite) {  
+        console.warn('Player or player sprite is missing. Level-up effect cannot be created.');  
+        // Fallback: Display a generic level-up message at the center of the screen  
+        const fallbackText = this.add.text(  
+          this.cameras.main.centerX,  
+          this.cameras.main.centerY - 50,  
+          'LEVEL UP!',  
+          {  
+            fontSize: '24px',  
+            fill: '#00ff00',  
+            stroke: '#000',  
+            strokeThickness: 4  
+          }  
+        ).setOrigin(0.5);  
+        
+        this.tweens.add({  
+          targets: fallbackText,  
+          y: fallbackText.y - 30,  
+          alpha: 0,  
+          duration: 1500,  
+          ease: 'Power2',  
+          onComplete: () => {  
+            if (fallbackText && fallbackText.destroy) {  
+              fallbackText.destroy();  
+            }  
+          }  
+        });  
+        return;  
+      }  
+      
       const text = this.add.text(
-        this.player.x,
-        this.player.y - 50,
+        this.player.sprite.x,
+        this.player.sprite.y - 50,
         'LEVEL UP!',
         {
           fontSize: '24px',
