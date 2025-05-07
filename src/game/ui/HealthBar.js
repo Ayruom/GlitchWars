@@ -208,7 +208,7 @@ export class HealthBar {
     this.barFill.displayWidth = Math.max(0, this.initialBarWidth * healthPercent);
     
     // Update color based on health percentage
-    this.barFill.fillColor = this.getHealthColor(healthPercent);
+    this.barFill.setFillStyle(this.getHealthColor(healthPercent)); 
     
     // Update health text if it exists
     if (this.healthText) {
