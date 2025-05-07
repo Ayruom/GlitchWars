@@ -1,4 +1,4 @@
-w// filepath: /Users/mouryagandalla/Documents/Projects/Hackathon1/retro-pixel-app/retro-pixel-app/src/game/managers/EnemyManager.js
+// filepath: /Users/mouryagandalla/Documents/Projects/Hackathon1/retro-pixel-app/retro-pixel-app/src/game/managers/EnemyManager.js
 import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 
