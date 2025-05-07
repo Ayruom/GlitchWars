@@ -111,12 +111,15 @@ export class EnemyManager {
         height: this.scene.game.config.height
       };
       
+      // Get player coordinates from the sprite property
+      const playerX = this.scene.player.sprite ? this.scene.player.sprite.x : config.width / 2;
+      
       switch(side) {
         case 0: // top
           x = Phaser.Math.Between(0, config.width);
           y = -buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.scene.player.x) ? this.enemyRightKey : this.enemyLeftKey;
+          spriteKey = (x < playerX) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 1: // right
           x = config.width + buffer;
@@ -127,7 +130,7 @@ export class EnemyManager {
           x = Phaser.Math.Between(0, config.width);
           y = config.height + buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.scene.player.x) ? this.enemyRightKey : this.enemyLeftKey;
+          spriteKey = (x < playerX) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 3: // left
           x = -buffer;
@@ -232,15 +235,19 @@ export class EnemyManager {
       if (!enemySprite.active || !this.scene.player) return;
       
       const player = this.scene.player;
+      const playerSprite = player.sprite;
+      
+      // Ensure we have player position data
+      if (!playerSprite) return;
       
       // Calculate distance to player
       const distance = Phaser.Math.Distance.Between(
         enemySprite.x, enemySprite.y,
-        player.x, player.y
+        playerSprite.x, playerSprite.y
       );
       
       // Update sprite based on position relative to player
-      if (enemySprite.x < player.x) {
+      if (enemySprite.x < playerSprite.x) {
         enemySprite.setTexture(this.enemyRightKey);
       } else {
         enemySprite.setTexture(this.enemyLeftKey);
@@ -254,7 +261,7 @@ export class EnemyManager {
       const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
       
       // Move towards player
-      this.scene.physics.moveToObject(enemySprite, player, speed);
+      this.scene.physics.moveToObject(enemySprite, playerSprite, speed);
     } catch (error) {
       console.error('Error updating enemy movement:', error);
     }
