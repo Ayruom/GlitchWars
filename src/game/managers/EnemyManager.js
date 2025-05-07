@@ -32,13 +32,13 @@ export class EnemyManager {
     // Create enemy group with physics
     this.enemies = this.scene.physics.add.group();
     
-    // Get the player sprite reference
-    const playerSprite = this.scene.player?.sprite;
+    // Get the player reference
+    const player = this.scene.player;
     
-    if (playerSprite) {
-      // Add collision detection between player sprite and enemies
+    if (player) {
+      // Add collision detection between player and enemies
       this.scene.physics.add.collider(
-        playerSprite, 
+        player, 
         this.enemies, 
         this.handlePlayerEnemyCollision, 
         null, 
@@ -93,7 +93,7 @@ export class EnemyManager {
    */
   spawnEnemy() {
     try {
-      if (!this.enemies || !this.scene.player || !this.scene.player.sprite) return;
+      if (!this.enemies || !this.scene.player) return;
       
       // Limit maximum number of enemies for performance
       if (this.enemies.getChildren().length >= this.maxEnemies) {
@@ -116,7 +116,7 @@ export class EnemyManager {
           x = Phaser.Math.Between(0, config.width);
           y = -buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.scene.player.sprite.x) ? this.enemyRightKey : this.enemyLeftKey;
+          spriteKey = (x < this.scene.player.x) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 1: // right
           x = config.width + buffer;
@@ -127,7 +127,7 @@ export class EnemyManager {
           x = Phaser.Math.Between(0, config.width);
           y = config.height + buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.scene.player.sprite.x) ? this.enemyRightKey : this.enemyLeftKey;
+          spriteKey = (x < this.scene.player.x) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 3: // left
           x = -buffer;
@@ -229,18 +229,18 @@ export class EnemyManager {
    */
   updateEnemyMovement(enemySprite) {
     try {
-      if (!enemySprite.active || !this.scene.player || !this.scene.player.sprite) return;
+      if (!enemySprite.active || !this.scene.player) return;
       
-      const playerSprite = this.scene.player.sprite;
+      const player = this.scene.player;
       
       // Calculate distance to player
       const distance = Phaser.Math.Distance.Between(
         enemySprite.x, enemySprite.y,
-        playerSprite.x, playerSprite.y
+        player.x, player.y
       );
       
       // Update sprite based on position relative to player
-      if (enemySprite.x < playerSprite.x) {
+      if (enemySprite.x < player.x) {
         enemySprite.setTexture(this.enemyRightKey);
       } else {
         enemySprite.setTexture(this.enemyLeftKey);
@@ -254,7 +254,7 @@ export class EnemyManager {
       const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
       
       // Move towards player
-      this.scene.physics.moveToObject(enemySprite, playerSprite, speed);
+      this.scene.physics.moveToObject(enemySprite, player, speed);
     } catch (error) {
       console.error('Error updating enemy movement:', error);
     }
