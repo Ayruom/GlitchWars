@@ -254,7 +254,7 @@ export class EnemyManager {
       // Calculate distance to player
       const distance = Phaser.Math.Distance.Between(
         enemySprite.x, enemySprite.y,
-        playerSprite.x, playerSprite.y
+        player.x, player.y
       );
       
       // Update sprite based on position relative to player
@@ -284,7 +284,7 @@ export class EnemyManager {
       const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
       
       // Move towards player
-      this.scene.physics.moveToObject(enemySprite, playerSprite, speed);
+      this.scene.physics.moveToObject(enemySprite, player, speed);
     } catch (error) {
       console.error('Error updating enemy movement:', error);
     }
