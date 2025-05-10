@@ -124,13 +124,14 @@ export class Enemy {
     try {
       if (!this.sprite || !this.sprite.active) return;
       
-      const playerSprite = this.scene.player.sprite;
-      if (!playerSprite || !playerSprite.active) return;
+      // Get the player reference - handle both direct sprite and Player class instances
+      const player = this.scene.player ? (this.scene.player.sprite || this.scene.player) : null;
+      if (!player || !player.active) return;
       
       // Calculate distance to player
       const distance = Phaser.Math.Distance.Between(
         this.sprite.x, this.sprite.y,
-        playerSprite.x, playerSprite.y
+        player.x, player.y
       );
       
       // Get texture keys from scene if available (use enemyManager or direct from scene)
@@ -138,7 +139,7 @@ export class Enemy {
       const enemyRightKey = this.scene.enemyManager?.enemyRightKey || this.scene.enemyRightKey || 'enemyRight';
       
       // Update sprite based on position relative to player
-      if (this.sprite.x < playerSprite.x) {
+      if (this.sprite.x < player.x) {
         try {
           if (this.sprite.setTexture) {
             this.sprite.setTexture(enemyRightKey);
@@ -163,7 +164,7 @@ export class Enemy {
       const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
       
       // Move towards player
-      this.scene.physics.moveToObject(this.sprite, playerSprite, speed);
+      this.scene.physics.moveToObject(this.sprite, player, speed);
     } catch (error) {
       console.error('Error updating enemy movement:', error);
     }
