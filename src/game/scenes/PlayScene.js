@@ -90,6 +90,8 @@ export class PlayScene extends BaseScene {
    */
   create() {
     try {
+      console.debug('[PROD DEBUG] PlayScene.create started');
+      
       // Create a black background
       this.add.rectangle(0, 0, this.config.width, this.config.height, 0x000000)
         .setOrigin(0)
@@ -99,11 +101,23 @@ export class PlayScene extends BaseScene {
       const heroImageKey = 'playerCharacter';
       let heroImagePath = this.getHeroImagePath();
       
+      console.debug('[PROD DEBUG] Loading hero image:', heroImagePath);
+      
       // Pre-load the hero image
       this.load.image(heroImageKey, heroImagePath);
       
+      // Debug asset loading events
+      this.load.on('filecomplete', (key) => {
+        console.debug(`[PROD DEBUG] Asset loaded successfully: ${key}`);
+      });
+      
+      this.load.on('loaderror', (fileObj) => {
+        console.error(`[PROD DEBUG] Error loading asset: ${fileObj.key} from ${fileObj.url}`);
+      });
+      
       // Once the image is loaded, set up the game elements
       this.load.once('complete', () => {
+        console.debug('[PROD DEBUG] Hero image loaded, creating player');
         this.createPlayer();
         this.setupGameElements();
         this.startGameLoop();
@@ -112,7 +126,7 @@ export class PlayScene extends BaseScene {
       // Start the loader
       this.load.start();
     } catch (error) {
-      console.error('Error in PlayScene.create:', error);
+      console.error('[PROD DEBUG] Error in PlayScene.create:', error);
       // Create minimal fallback UI to show something
       this.createFallbackUI();
     }
