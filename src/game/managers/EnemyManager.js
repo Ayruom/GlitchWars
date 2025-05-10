@@ -32,18 +32,35 @@ export class EnemyManager {
     // Create enemy group with physics
     this.enemies = this.scene.physics.add.group();
     
-    // Get the player reference
+    // Get the player reference - ensure we access the sprite if player is a Player class instance
     const player = this.scene.player;
     
     if (player) {
+      const playerTarget = player.sprite || player;
+      
+      console.debug('[PROD DEBUG] Setting up player-enemy collision. Player type:', 
+        player.sprite ? 'Player class' : 'Direct sprite',
+        'Target object:', playerTarget);
+      
       // Add collision detection between player and enemies
       this.scene.physics.add.collider(
-        player, 
+        playerTarget, 
         this.enemies, 
         this.handlePlayerEnemyCollision, 
         null, 
         this
       );
+      
+      // Add overlap detection as a backup in case collider fails
+      this.scene.physics.add.overlap(
+        playerTarget,
+        this.enemies,
+        this.handlePlayerEnemyCollision,
+        null,
+        this
+      );
+    } else {
+      console.error('[PROD DEBUG] No player found when setting up enemy collisions');
     }
   }
   
@@ -93,7 +110,7 @@ export class EnemyManager {
    */
   spawnEnemy() {
     try {
-      if (!this.enemies || !this.scene.player) return;
+      if (!this.enemies || !this.scene.player || !this.scene.player.sprite) return;
       
       // Limit maximum number of enemies for performance
       if (this.enemies.getChildren().length >= this.maxEnemies) {
@@ -116,7 +133,7 @@ export class EnemyManager {
           x = Phaser.Math.Between(0, config.width);
           y = -buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.scene.player.x) ? this.enemyRightKey : this.enemyLeftKey;
+          spriteKey = (x < this.scene.player.sprite.x) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 1: // right
           x = config.width + buffer;
@@ -127,7 +144,7 @@ export class EnemyManager {
           x = Phaser.Math.Between(0, config.width);
           y = config.height + buffer;
           // Compare with player's x position to determine facing
-          spriteKey = (x < this.scene.player.x) ? this.enemyRightKey : this.enemyLeftKey;
+          spriteKey = (x < this.scene.player.sprite.x) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 3: // left
           x = -buffer;
@@ -229,21 +246,34 @@ export class EnemyManager {
    */
   updateEnemyMovement(enemySprite) {
     try {
-      if (!enemySprite.active || !this.scene.player) return;
+      if (!enemySprite.active || !this.scene.player || !this.scene.player.sprite) return;
       
-      const player = this.scene.player;
+      const player = this.scene.player.sprite || this.scene.player;
+      if (!player.active) return;
       
       // Calculate distance to player
       const distance = Phaser.Math.Distance.Between(
         enemySprite.x, enemySprite.y,
-        player.x, player.y
+        playerSprite.x, playerSprite.y
       );
       
       // Update sprite based on position relative to player
       if (enemySprite.x < player.x) {
-        enemySprite.setTexture(this.enemyRightKey);
+        if (enemySprite.setTexture) {
+          try {
+            enemySprite.setTexture(this.enemyRightKey);
+          } catch (err) {
+            console.debug('Failed to set enemy texture:', err);
+          }
+        }
       } else {
-        enemySprite.setTexture(this.enemyLeftKey);
+        if (enemySprite.setTexture) {
+          try {
+            enemySprite.setTexture(this.enemyLeftKey);
+          } catch (err) {
+            console.debug('Failed to set enemy texture:', err);
+          }
+        }
       }
       
       // Dynamic speed based on distance (faster when further away)
@@ -254,7 +284,7 @@ export class EnemyManager {
       const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
       
       // Move towards player
-      this.scene.physics.moveToObject(enemySprite, player, speed);
+      this.scene.physics.moveToObject(enemySprite, playerSprite, speed);
     } catch (error) {
       console.error('Error updating enemy movement:', error);
     }

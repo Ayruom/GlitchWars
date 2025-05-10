@@ -2,7 +2,6 @@ import { BaseScene } from './BaseScene';
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { EnemyManager } from '../managers/EnemyManager';
-import { HealthBar } from '../ui/HealthBar';
 
 export class PlayScene extends BaseScene {
   constructor(config) {
@@ -86,6 +85,44 @@ export class PlayScene extends BaseScene {
   }
 
   /**
+   * Preload assets needed for the game
+   */
+  preload() {
+    try {
+      // Load the enemy sprite images with proper paths
+      // Using unique keys with timestamps to avoid conflicts
+      this.enemyLeftKey = 'enemyLeft_' + Date.now();
+      this.enemyRightKey = 'enemyRight_' + Date.now();
+      this.heroImageKey = 'playerCharacter_' + Date.now();
+      
+      // Get the appropriate hero image path
+      let heroImagePath = this.getHeroImagePath();
+      
+      console.debug('[PROD DEBUG] Loading game assets');
+      console.debug('[PROD DEBUG] Loading hero image:', heroImagePath);
+      
+      this.load.image(this.heroImageKey, heroImagePath);
+      this.load.image(this.enemyLeftKey, 'assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40LeftFacing.png');
+      this.load.image(this.enemyRightKey, 'assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40rightFacing.png');
+      
+      // Debug asset loading events
+      this.load.on('filecomplete', (key) => {
+        console.debug(`[PROD DEBUG] Asset loaded successfully: ${key}`);
+      });
+      
+      this.load.on('loaderror', (fileObj) => {
+        console.error(`[PROD DEBUG] Error loading asset: ${fileObj.key} from ${fileObj.url}`);
+        // Create fallback texture if enemy images fail to load
+        if (fileObj.key === this.enemyLeftKey || fileObj.key === this.enemyRightKey) {
+          this.createFallbackEnemyTextures(fileObj.key);
+        }
+      });
+    } catch (error) {
+      console.error('[PROD DEBUG] Error in preload:', error);
+    }
+  }
+
+  /**
    * Create game objects, setup physics, and initialize the scene
    */
   create() {
@@ -97,38 +134,66 @@ export class PlayScene extends BaseScene {
         .setOrigin(0)
         .setDepth(-1);
       
-      // Get the appropriate hero image path
-      const heroImageKey = 'playerCharacter';
-      let heroImagePath = this.getHeroImagePath();
+      // Share the unique texture keys with the enemy manager
+      if (!this.enemyManager) {
+        // Create temporary enemy manager if needed for updating keys
+        this.enemyManager = {};
+      }
       
-      console.debug('[PROD DEBUG] Loading hero image:', heroImagePath);
+      // Pass the texture keys to the enemy manager
+      this.enemyLeftKey = this.enemyLeftKey || 'enemyLeft_' + Date.now();
+      this.enemyRightKey = this.enemyRightKey || 'enemyRight_' + Date.now();
+      this.heroImageKey = this.heroImageKey || 'playerCharacter_' + Date.now();
       
-      // Pre-load the hero image
-      this.load.image(heroImageKey, heroImagePath);
-      
-      // Debug asset loading events
-      this.load.on('filecomplete', (key) => {
-        console.debug(`[PROD DEBUG] Asset loaded successfully: ${key}`);
+      console.debug('[PROD DEBUG] Using texture keys:', {
+        left: this.enemyLeftKey,
+        right: this.enemyRightKey,
+        hero: this.heroImageKey
       });
       
-      this.load.on('loaderror', (fileObj) => {
-        console.error(`[PROD DEBUG] Error loading asset: ${fileObj.key} from ${fileObj.url}`);
-      });
-      
-      // Once the image is loaded, set up the game elements
-      this.load.once('complete', () => {
-        console.debug('[PROD DEBUG] Hero image loaded, creating player');
-        this.createPlayer();
-        this.setupGameElements();
-        this.startGameLoop();
-      });
-      
-      // Start the loader
-      this.load.start();
+      // Create the player and game elements
+      this.createPlayer();
+      this.setupGameElements();
+      this.startGameLoop();
     } catch (error) {
-      console.error('[PROD DEBUG] Error in PlayScene.create:', error);
+      console.error('Error in PlayScene.create:', error);
       // Create minimal fallback UI to show something
       this.createFallbackUI();
+    }
+  }
+
+  /**
+   * Create fallback textures for enemies when image loading fails
+   */
+  createFallbackEnemyTextures(key) {
+    try {
+      // Create a graphics object
+      const graphics = this.add.graphics();
+      
+      // Draw a red rectangle
+      graphics.fillStyle(0xff0000);
+      graphics.fillRect(0, 0, 40, 40);
+      
+      // Add an arrow to indicate direction
+      graphics.fillStyle(0xffffff);
+      
+      if (key === this.enemyLeftKey) {
+        // Left-pointing arrow
+        graphics.fillTriangle(30, 20, 10, 10, 10, 30);
+      } else {
+        // Right-pointing arrow
+        graphics.fillTriangle(10, 20, 30, 10, 30, 30);
+      }
+      
+      // Generate texture from graphics
+      graphics.generateTexture(key, 40, 40);
+      
+      // Clear graphics
+      graphics.clear();
+      
+      console.debug(`[PROD DEBUG] Created fallback texture for ${key}`);
+    } catch (error) {
+      console.error(`Error creating fallback texture for ${key}:`, error);
     }
   }
 
@@ -202,7 +267,7 @@ export class PlayScene extends BaseScene {
     try {
       // Create the player using the Player class with appropriate configuration
       this.player = new Player(this, this.config.width / 2, this.config.height / 2, {
-        spriteKey: 'playerCharacter',
+        spriteKey: this.heroImageKey,
         maxHealth: this.playerMaxHealth,
         currentHealth: this.playerCurrentHealth,
         speed: this.playerSpeed,
@@ -267,8 +332,18 @@ export class PlayScene extends BaseScene {
    * Setup enemy group and collision detection using EnemyManager
    */
   setupEnemies() {
-    // Initialize the enemy manager with current scene
+    // Initialize the enemy manager with current scene and pass texture keys
     this.enemyManager = new EnemyManager(this);
+    
+    // Update the enemy sprite key references in the manager
+    if (this.enemyManager) {
+      this.enemyManager.enemyLeftKey = this.enemyLeftKey;
+      this.enemyManager.enemyRightKey = this.enemyRightKey;
+      console.debug('[PROD DEBUG] Updated enemy manager with texture keys:', {
+        left: this.enemyManager.enemyLeftKey,
+        right: this.enemyManager.enemyRightKey
+      });
+    }
     
     // Store a reference to the enemies group
     this.enemies = this.enemyManager.enemies;
@@ -314,17 +389,63 @@ export class PlayScene extends BaseScene {
    * Create health bars for player and enemies
    */
   createHealthBars() {
-    // Create player health bar using the HealthBar class
-    this.healthBar = new HealthBar(this, {
-      x: 10,
-      y: this.config.height - 40,
-      width: Math.max(150, Math.min(200, this.config.width / 6)),
-      height: Math.max(15, Math.min(20, this.config.height / 30)),
-      maxHealth: this.playerMaxHealth,
-      currentHealth: this.playerCurrentHealth,
-      label: 'Health',
-      showText: true
-    });
+    const healthBarWidth = Math.max(150, Math.min(200, this.config.width / 6));
+    const healthBarHeight = Math.max(15, Math.min(20, this.config.height / 30));
+    const healthBarY = this.config.height - healthBarHeight - 20;
+    const baseFontSize = Math.max(12, Math.min(18, this.config.width / 50));
+    
+    // Health bar background (black)
+    this.playerHealthBarBg = this.add.rectangle(
+      10, 
+      healthBarY, 
+      healthBarWidth, 
+      healthBarHeight, 
+      0x000000
+    ).setOrigin(0, 0);
+    
+    // Health bar border (white)
+    this.playerHealthBarBorder = this.add.rectangle(
+      10, 
+      healthBarY, 
+      healthBarWidth, 
+      healthBarHeight, 
+      0x000000
+    ).setOrigin(0, 0)
+    .setStrokeStyle(2, 0xffffff, 1);
+    
+    // Health bar fill (starts green)
+    this.playerHealthBar = this.add.rectangle(
+      12, // +2 padding from left
+      healthBarY + 2, // +2 padding from top
+      healthBarWidth - 4, // -4 for left and right padding
+      healthBarHeight - 4, // -4 for top and bottom padding
+      0x00ff00
+    ).setOrigin(0, 0);
+    
+    // Store the initial width for scaling
+    this.playerHealthBarInitialWidth = healthBarWidth - 4;
+    
+    // Health text label
+    this.healthLabel = this.add.text(
+      10, 
+      healthBarY - baseFontSize - 5, 
+      'Health', 
+      {
+        fontSize: `${baseFontSize}px`,
+        fill: '#ffffff'
+      }
+    );
+    
+    // Health value text
+    this.playerHealthText = this.add.text(
+      10 + healthBarWidth + 10, 
+      healthBarY + 2, 
+      `${this.playerCurrentHealth}/${this.playerMaxHealth}`, 
+      {
+        fontSize: `${baseFontSize}px`,
+        fill: '#ffffff'
+      }
+    );
   }
 
   /**
@@ -367,12 +488,17 @@ export class PlayScene extends BaseScene {
     try {
       if (!this.player) return;
       
-      // Handle player movement
-      this.handlePlayerMovement();
+      // Use the Player class's update method instead of handling movement directly
+      if (typeof this.player.update === 'function') {
+        this.player.update(time, delta);
+      } else {
+        // Fallback to direct handling if the player doesn't have an update method
+        this.handlePlayerMovement();
+      }
       
       // Use EnemyManager's update method
       if (this.enemyManager) {
-        this.enemyManager.update();
+        this.enemyManager.update(time, delta);
       }
       
       this.updateHealthBars();
@@ -389,6 +515,8 @@ export class PlayScene extends BaseScene {
     // Calculate responsive font sizes
     const baseFontSize = Math.max(12, Math.min(18, this.config.width / 50));
     const headerFontSize = Math.max(14, Math.min(24, this.config.width / 40));
+    const healthBarWidth = Math.max(150, Math.min(200, this.config.width / 6));
+    const healthBarHeight = Math.max(15, Math.min(20, this.config.height / 30));
     
     // Update score and level text
     if (this.scoreText) {
@@ -411,9 +539,33 @@ export class PlayScene extends BaseScene {
       this.characterText.setPosition(this.config.width - 16, 16);
     }
     
-    // Update health bar dimensions and position using the HealthBar class
-    if (this.healthBar) {
-      this.healthBar.updateResponsive(this.config.width, this.config.height);
+    // Update health bar dimensions and position
+    const healthBarY = this.config.height - healthBarHeight - 20;
+    
+    if (this.playerHealthBar) {
+      // Background
+      this.playerHealthBarBg.setPosition(10, healthBarY)
+        .setSize(healthBarWidth, healthBarHeight);
+      
+      // Border
+      this.playerHealthBarBorder.setPosition(10, healthBarY)
+        .setSize(healthBarWidth, healthBarHeight);
+      
+      // Fill
+      this.playerHealthBar.setPosition(12, healthBarY + 2)
+        .setSize(healthBarWidth - 4, healthBarHeight - 4);
+      
+      // Update health text position and size
+      if (this.playerHealthText) {
+        this.playerHealthText.setFontSize(baseFontSize)
+          .setPosition(10 + healthBarWidth + 10, healthBarY + 2);
+      }
+      
+      // Update health label
+      if (this.healthLabel) {
+        this.healthLabel.setFontSize(baseFontSize)
+          .setPosition(10, healthBarY - baseFontSize - 5);
+      }
     }
   }
 
@@ -422,10 +574,42 @@ export class PlayScene extends BaseScene {
    */
   updateHealthBars() {
     try {
-      if (!this.healthBar) return;
+      if (!this.playerHealthBar || !this.playerHealthText) return;
       
-      // Update player health bar using our HealthBar class
-      this.healthBar.updateHealth(this.playerCurrentHealth, this.playerMaxHealth);
+      // Update player health bar
+      const healthPercent = this.playerCurrentHealth / this.playerMaxHealth;
+      
+      // Important: Set the DisplayWidth instead of width to properly scale the rectangle
+      const initialWidth = this.playerHealthBarInitialWidth;
+      this.playerHealthBar.displayWidth = Math.max(0, initialWidth * healthPercent);
+      
+      // Update color based on health percentage
+      let color;
+      if (healthPercent > 0.6) {
+        // Green to yellow gradient for high health (100% to 60%)
+        const t = (1 - healthPercent) * 2.5;
+        color = Phaser.Display.Color.Interpolate.ColorWithColor(
+          { r: 0, g: 255, b: 0 },
+          { r: 255, g: 255, b: 0 },
+          100,
+          Math.floor(t * 100)
+        );
+      } else {
+        // Yellow to red gradient for low health (60% to 0%)
+        const t = (0.6 - healthPercent) * (1 / 0.6);
+        color = Phaser.Display.Color.Interpolate.ColorWithColor(
+          { r: 255, g: 255, b: 0 },
+          { r: 255, g: 0, b: 0 },
+          100,
+          Math.floor(t * 100)
+        );
+      }
+      
+      const finalColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
+      this.playerHealthBar.setFillStyle(finalColor);
+      
+      // Update health text
+      this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
     } catch (error) {
       console.error('Error updating health bars:', error);
     }
