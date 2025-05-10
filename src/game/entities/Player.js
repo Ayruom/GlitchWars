@@ -93,18 +93,39 @@ export class Player {
    * Handle player movement based on input
    */
   handleMovement() {
-    if (!this.sprite || !this.sprite.body) return;
+    if (!this.sprite || !this.sprite.body) {
+      console.debug('[PROD DEBUG] Player: Sprite or body not available');
+      return;
+    }
     
     // Get input handlers from the scene
     const { cursors, wasd } = this.scene;
-    if (!cursors || !wasd) return;
+    if (!cursors || !wasd) {
+      console.debug('[PROD DEBUG] Player: Input handlers not found in scene');
+      return;
+    }
+    
+    // Debug input state
+    const inputState = {
+      left: wasd.left?.isDown || cursors.left?.isDown,
+      right: wasd.right?.isDown || cursors.right?.isDown,
+      up: wasd.up?.isDown || cursors.up?.isDown,
+      down: wasd.down?.isDown || cursors.down?.isDown,
+    };
+    
+    // Only log when inputs change to avoid console spam
+    if (this._lastInputState && JSON.stringify(this._lastInputState) !== JSON.stringify(inputState)) {
+      console.debug('[PROD DEBUG] Player input:', inputState);
+    }
+    this._lastInputState = {...inputState};
     
     // Reset velocity
     this.sprite.body.setVelocity(0);
     
     // Horizontal movement (prioritize WASD then arrow keys)
-    if (wasd.left.isDown || cursors.left.isDown) {
+    if (inputState.left) {
       this.sprite.body.setVelocityX(-this.speed);
+      console.debug('[PROD DEBUG] Player moving left, velocity:', -this.speed);
       
       // Flip sprite horizontally when moving left
       if (this.facingRight) {
@@ -113,8 +134,9 @@ export class Player {
         // Maintain the physics body's correct position
         this.sprite.body.offset.x = this.sprite.width;
       }
-    } else if (wasd.right.isDown || cursors.right.isDown) {
+    } else if (inputState.right) {
       this.sprite.body.setVelocityX(this.speed);
+      console.debug('[PROD DEBUG] Player moving right, velocity:', this.speed);
       
       // Reset sprite to normal when moving right
       if (!this.facingRight) {
@@ -126,10 +148,26 @@ export class Player {
     }
     
     // Vertical movement (prioritize WASD then arrow keys)
-    if (wasd.up.isDown || cursors.up.isDown) {
+    if (inputState.up) {
       this.sprite.body.setVelocityY(-this.speed);
-    } else if (wasd.down.isDown || cursors.down.isDown) {
+      console.debug('[PROD DEBUG] Player moving up, velocity:', -this.speed);
+    } else if (inputState.down) {
       this.sprite.body.setVelocityY(this.speed);
+      console.debug('[PROD DEBUG] Player moving down, velocity:', this.speed);
+    }
+    
+    // Periodically log player position (once per second)
+    const now = Date.now();
+    if (!this._lastPositionLog || now - this._lastPositionLog > 1000) {
+      console.debug('[PROD DEBUG] Player position:', {
+        x: this.sprite.x,
+        y: this.sprite.y,
+        velocity: {
+          x: this.sprite.body.velocity.x,
+          y: this.sprite.body.velocity.y
+        }
+      });
+      this._lastPositionLog = now;
     }
   }
   
