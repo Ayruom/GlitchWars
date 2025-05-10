@@ -248,6 +248,9 @@ export class PlayScene extends BaseScene {
     this.levelManager.onWaveChange((wave) => {
       this.scoreDisplay.updateWave(wave);
       
+      // Create wave change effect in the center of the screen
+      this.createWaveChangeEffect();
+      
       // Update player health on wave change
       if (this.player) {
         this.player.increaseMaxHealth(this.levelManager.healthIncreaseAmount, this.levelManager.maxHealthCap);
@@ -394,6 +397,26 @@ export class PlayScene extends BaseScene {
       );
     } catch (error) {
       console.error('Error creating level up effect:', error);
+    }
+  }
+
+  /**
+   * Create wave change visual effect in the center of the screen
+   */
+  createWaveChangeEffect() {
+    try {
+      // Calculate the center of the screen
+      const screenCenterX = this.cameras.main.width / 2;
+      const screenCenterY = this.cameras.main.height / 2;
+      
+      // Use effects helper to create wave change effect
+      this.effectsHelper.createWaveChangeEffect(
+        screenCenterX,
+        screenCenterY,
+        this.levelManager.wave
+      );
+    } catch (error) {
+      console.error('Error creating wave change effect:', error);
     }
   }
 
