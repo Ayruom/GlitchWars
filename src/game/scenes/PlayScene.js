@@ -201,10 +201,64 @@ export class PlayScene extends BaseScene {
    * Setup all game elements after player is created
    */
   setupGameElements() {
-    this.setupEnemies();
-    this.createUI();
-    this.createHealthBars();
-    this.setupInput();
+    // Setup collision detection
+    this.collisionManager = new CollisionManager(this, {
+      playerDamageRate: 500,
+      enemyContactDamage: 5,
+      weaponDamage: 10
+    });
+    this.collisionManager.setup(this.player, this.enemyManager.enemies);
+    
+    // Start enemy spawning
+    this.enemyManager.startSpawning();
+    
+    // Start difficulty scaling
+    this.levelManager.startDifficultyTimer();
+    
+    // Register level up and score update callbacks
+    this.registerCallbacks();
+  }
+  
+  /**
+   * Register callbacks for game events
+   * @private
+   */
+  registerCallbacks() {
+    // Level manager callbacks
+    this.levelManager.onLevelUp((level) => {
+      this.scoreDisplay.updateLevel(level);
+      this.createLevelUpEffect();
+    });
+    
+    this.levelManager.onWaveChange((wave) => {
+      this.scoreDisplay.updateWave(wave);
+      
+      // Create wave change effect in the center of the screen
+      this.createWaveChangeEffect();
+      
+      // Update player health on wave change
+      if (this.player) {
+        this.player.increaseMaxHealth(this.levelManager.healthIncreaseAmount, this.levelManager.maxHealthCap);
+        
+        // Small heal on wave completion
+        const healAmount = this.player.maxHealth * 0.2;
+        this.player.heal(healAmount);
+        
+        // Update health bar
+        this.healthBar.updateHealth(this.player.currentHealth, this.player.maxHealth);
+      }
+    });
+    
+    this.levelManager.onScoreUpdate((score) => {
+      this.scoreDisplay.updateScore(score);
+    });
+    
+    // Input manager callbacks
+    this.inputManager.onRestartKey(() => {
+      if (this.gameOverScreen && this.gameOverScreen.isVisible) {
+        this.scene.restart();
+      }
+    });
   }
 
   /**
@@ -480,185 +534,48 @@ export class PlayScene extends BaseScene {
   }
 
   /**
-   * Update game state on each frame
-   * @param {number} time - Current time
-   * @param {number} delta - Time since last update
+   * Create level up visual effect
    */
-  update(time, delta) {
+  createLevelUpEffect() {
     try {
-      if (!this.player) return;
+      if (!this.player || !this.player.sprite) {  
+        console.warn('Player or player sprite is missing. Level-up effect cannot be created.');  
+        return;  
+      }  
       
-      // Use the Player class's update method instead of handling movement directly
-      if (typeof this.player.update === 'function') {
-        this.player.update(time, delta);
-      } else {
-        // Fallback to direct handling if the player doesn't have an update method
-        this.handlePlayerMovement();
-      }
-      
-      // Use EnemyManager's update method
-      if (this.enemyManager) {
-        this.enemyManager.update(time, delta);
-      }
-      
-      this.updateHealthBars();
-      this.updateUIPositions();
+      // Use effects helper to create level up effect
+      this.effectsHelper.createLevelUpEffect(
+        this.player.sprite.x,
+        this.player.sprite.y,
+        this.levelManager.level
+      );
     } catch (error) {
-      console.error('Error in update loop:', error);
-    }
-  }
-
-  // Add this method to handle UI repositioning
-  updateUIPositions() {
-    if (!this.config) return;
-
-    // Calculate responsive font sizes
-    const baseFontSize = Math.max(12, Math.min(18, this.config.width / 50));
-    const headerFontSize = Math.max(14, Math.min(24, this.config.width / 40));
-    const healthBarWidth = Math.max(150, Math.min(200, this.config.width / 6));
-    const healthBarHeight = Math.max(15, Math.min(20, this.config.height / 30));
-    
-    // Update score and level text
-    if (this.scoreText) {
-      this.scoreText.setFontSize(baseFontSize);
-      this.scoreText.setPosition(16, 16);
-    }
-    
-    if (this.levelText) {
-      this.levelText.setFontSize(baseFontSize);
-      this.levelText.setPosition(16, 16 + baseFontSize + 10);
-    }
-    
-    if (this.waveText) {
-      this.waveText.setFontSize(baseFontSize);
-      this.waveText.setPosition(16, 16 + (baseFontSize + 10) * 2);
-    }
-    
-    if (this.characterText) {
-      this.characterText.setFontSize(baseFontSize);
-      this.characterText.setPosition(this.config.width - 16, 16);
-    }
-    
-    // Update health bar dimensions and position
-    const healthBarY = this.config.height - healthBarHeight - 20;
-    
-    if (this.playerHealthBar) {
-      // Background
-      this.playerHealthBarBg.setPosition(10, healthBarY)
-        .setSize(healthBarWidth, healthBarHeight);
-      
-      // Border
-      this.playerHealthBarBorder.setPosition(10, healthBarY)
-        .setSize(healthBarWidth, healthBarHeight);
-      
-      // Fill
-      this.playerHealthBar.setPosition(12, healthBarY + 2)
-        .setSize(healthBarWidth - 4, healthBarHeight - 4);
-      
-      // Update health text position and size
-      if (this.playerHealthText) {
-        this.playerHealthText.setFontSize(baseFontSize)
-          .setPosition(10 + healthBarWidth + 10, healthBarY + 2);
-      }
-      
-      // Update health label
-      if (this.healthLabel) {
-        this.healthLabel.setFontSize(baseFontSize)
-          .setPosition(10, healthBarY - baseFontSize - 5);
-      }
+      console.error('Error creating level up effect:', error);
     }
   }
 
   /**
-   * Update health bars for player and enemies
+   * Create wave change visual effect in the center of the screen
    */
-  updateHealthBars() {
+  createWaveChangeEffect() {
     try {
-      if (!this.playerHealthBar || !this.playerHealthText) return;
+      // Calculate the center of the screen
+      const screenCenterX = this.cameras.main.width / 2;
+      const screenCenterY = this.cameras.main.height / 2;
       
-      // Update player health bar
-      const healthPercent = this.playerCurrentHealth / this.playerMaxHealth;
-      
-      // Important: Set the DisplayWidth instead of width to properly scale the rectangle
-      const initialWidth = this.playerHealthBarInitialWidth;
-      this.playerHealthBar.displayWidth = Math.max(0, initialWidth * healthPercent);
-      
-      // Update color based on health percentage
-      let color;
-      if (healthPercent > 0.6) {
-        // Green to yellow gradient for high health (100% to 60%)
-        const t = (1 - healthPercent) * 2.5;
-        color = Phaser.Display.Color.Interpolate.ColorWithColor(
-          { r: 0, g: 255, b: 0 },
-          { r: 255, g: 255, b: 0 },
-          100,
-          Math.floor(t * 100)
-        );
-      } else {
-        // Yellow to red gradient for low health (60% to 0%)
-        const t = (0.6 - healthPercent) * (1 / 0.6);
-        color = Phaser.Display.Color.Interpolate.ColorWithColor(
-          { r: 255, g: 255, b: 0 },
-          { r: 255, g: 0, b: 0 },
-          100,
-          Math.floor(t * 100)
-        );
-      }
-      
-      const finalColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
-      this.playerHealthBar.setFillStyle(finalColor);
-      
-      // Update health text
-      this.playerHealthText.setText(`${Math.ceil(this.playerCurrentHealth)}/${this.playerMaxHealth}`);
+      // Use effects helper to create wave change effect
+      this.effectsHelper.createWaveChangeEffect(
+        screenCenterX,
+        screenCenterY,
+        this.levelManager.wave
+      );
     } catch (error) {
-      console.error('Error updating health bars:', error);
+      console.error('Error creating wave change effect:', error);
     }
   }
 
   /**
-   * Handle player movement based on input
-   */
-  handlePlayerMovement() {
-    if (!this.player || !this.player.body) return;
-    
-    // Reset velocity
-    this.player.body.setVelocity(0);
-    
-    const wasFlipped = !this.player.facingRight;
-    
-    // Horizontal movement (prioritize WASD then arrow keys)
-    if (this.wasd.left.isDown || this.cursors.left.isDown) {
-      this.player.body.setVelocityX(-this.playerSpeed);
-      
-      // Flip sprite horizontally when moving left
-      if (this.player.facingRight) {
-        this.player.facingRight = false;
-        this.player.scaleX = -1; // Flip sprite by setting negative scale
-        // Maintain the physics body's correct position
-        this.player.body.offset.x = this.player.width;
-      }
-    } else if (this.wasd.right.isDown || this.cursors.right.isDown) {
-      this.player.body.setVelocityX(this.playerSpeed);
-      
-      // Reset sprite to normal when moving right
-      if (!this.player.facingRight) {
-        this.player.facingRight = true;
-        this.player.scaleX = 1; // Normal scale
-        // Reset the physics body offset
-        this.player.body.offset.x = 0;
-      }
-    }
-    
-    // Vertical movement (prioritize WASD then arrow keys)
-    if (this.wasd.up.isDown || this.cursors.up.isDown) {
-      this.player.body.setVelocityY(-this.playerSpeed);
-    } else if (this.wasd.down.isDown || this.cursors.down.isDown) {
-      this.player.body.setVelocityY(this.playerSpeed);
-    }
-  }
-
-  /**
-   * Damage the player
+   * Handle player taking damage
    * @param {number} amount - Damage amount
    */
   damagePlayer(amount) {
