@@ -110,18 +110,163 @@ export class EffectsHelper {
    */
   createLevelUpEffect(x, y, level) {
     try {
-      // Create level up text
-      const text = this.createTextEffect(
-        x, y, 'LEVEL UP!', 
-        {
-          color: '#00ff00',
-          fontSize: '24px',
-          duration: 1500,
-          distance: 40
-        }
-      );
+      // Create pixel-style container for the effect
+      const container = this.scene.add.container(x, y);
       
-      // Create particle effect if supported
+      // Create main text with pixel font
+      const mainText = this.scene.add.text(
+        0, 0,
+        'LEVEL UP!!',
+        {
+          fontFamily: 'monospace',
+          fontSize: '28px',
+          fill: '#00ff00',
+          stroke: '#003300',
+          strokeThickness: 4
+        }
+      ).setOrigin(0.5);
+      container.add(mainText);
+      
+      // Create glitch effect elements - using RGB color split
+      const glitchText1 = this.scene.add.text(
+        2, 2,
+        'LEVEL UP!!',
+        {
+          fontFamily: 'monospace',
+          fontSize: '28px',
+          fill: '#00ffff',
+          alpha: 0.7
+        }
+      ).setOrigin(0.5);
+      
+      const glitchText2 = this.scene.add.text(
+        -2, -1,
+        'LEVEL UP!!',
+        {
+          fontFamily: 'monospace',
+          fontSize: '28px',
+          fill: '#ff00ff',
+          alpha: 0.7
+        }
+      ).setOrigin(0.5);
+      
+      container.add([glitchText1, glitchText2]);
+      
+      // Pixel noise rectangles - these will flash to create digital noise effect
+      const pixelNoise = [];
+      for (let i = 0; i < 10; i++) {
+        const rect = this.scene.add.rectangle(
+          Phaser.Math.Between(-50, 50),
+          Phaser.Math.Between(-30, 30),
+          Phaser.Math.Between(5, 15),
+          Phaser.Math.Between(2, 6),
+          0xffffff,
+          Phaser.Math.FloatBetween(0.3, 0.7)
+        );
+        pixelNoise.push(rect);
+        container.add(rect);
+      }
+      
+      // Level number display
+      if (level) {
+        const levelText = this.scene.add.text(
+          0, 30,
+          `LEVEL ${level}`,
+          {
+            fontFamily: 'monospace',
+            fontSize: '18px',
+            fill: '#ffffff',
+            stroke: '#003300',
+            strokeThickness: 3
+          }
+        ).setOrigin(0.5);
+        container.add(levelText);
+      }
+      
+      // Initial scale animation
+      this.scene.tweens.add({
+        targets: container,
+        scale: { from: 0.5, to: 1 },
+        duration: 200,
+        ease: 'Back.Out'
+      });
+      
+      // Set up glitch animation using discrete tweens and timers instead of timeline
+      let glitchCount = 0;
+      const maxGlitches = 8;
+      
+      const performGlitch = () => {
+        // Skip if container was already destroyed
+        if (!container || !container.active) return;
+        
+        // Random glitch movement for colored text layers
+        this.scene.tweens.add({
+          targets: glitchText1,
+          x: Phaser.Math.Between(-6, 6),
+          y: Phaser.Math.Between(-4, 4),
+          alpha: Phaser.Math.FloatBetween(0.5, 0.8),
+          duration: 50,
+          onComplete: () => {
+            if (++glitchCount < maxGlitches) {
+              // Schedule next glitch
+              this.scene.time.delayedCall(100, performGlitch);
+            } else {
+              // After glitches complete, start floating up and fading
+              this.scene.tweens.add({
+                targets: container,
+                y: y - 40,
+                duration: 1000,
+                ease: 'Sine.InOut',
+                onComplete: () => {
+                  // Final fade out
+                  this.scene.tweens.add({
+                    targets: container,
+                    alpha: 0,
+                    scale: 1.2,
+                    duration: 400,
+                    onComplete: () => {
+                      if (container && container.destroy) {
+                        container.destroy();
+                      }
+                    }
+                  });
+                }
+              });
+            }
+          }
+        });
+        
+        // Animate second glitch text separately
+        this.scene.tweens.add({
+          targets: glitchText2,
+          x: Phaser.Math.Between(-6, 6),
+          y: Phaser.Math.Between(-4, 4),
+          alpha: Phaser.Math.FloatBetween(0.5, 0.8),
+          duration: 50
+        });
+      };
+      
+      // Start the first glitch after a short delay
+      this.scene.time.delayedCall(200, performGlitch);
+      
+      // Animate pixel noise rectangles separately
+      pixelNoise.forEach(rect => {
+        // Random movement and flickering
+        this.scene.tweens.add({
+          targets: rect,
+          alpha: { from: rect.alpha, to: 0 },
+          x: `+=${Phaser.Math.Between(-20, 20)}`,
+          y: `+=${Phaser.Math.Between(-10, 10)}`,
+          duration: Phaser.Math.Between(200, 600),
+          repeat: 3,
+          yoyo: true
+        });
+      });
+      
+      // Optional: Camera effects
+      this.shakeScreen(150, 0.005);
+      
+      // Create additional particle effects
       if (this.scene.add.particles) {
         const particles = this.scene.add.particles(x, y, 'flare', {
           speed: 100,
@@ -133,7 +278,7 @@ export class EffectsHelper {
         });
         
         // One-time burst
-        particles.explode(20);
+        particles.explode(25);
         
         // Clean up particles after animation
         this.scene.time.delayedCall(1000, () => {
@@ -143,9 +288,7 @@ export class EffectsHelper {
         });
       }
       
-      // Green screen flash removed
-      
-      return text;
+      return container;
     } catch (error) {
       console.error('Error creating level up effect:', error);
       return null;
@@ -292,6 +435,185 @@ export class EffectsHelper {
       return flash;
     } catch (error) {
       console.error('Error creating explosion effect:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Create wave change effect with text and glitch animation
+   * @param {number} x - X coordinate (center of screen)
+   * @param {number} y - Y coordinate (center of screen)
+   * @param {number} waveNumber - New wave number
+   */
+  createWaveChangeEffect(x, y, waveNumber) {
+    try {
+      // Create pixel-style container for the effect
+      const container = this.scene.add.container(x, y);
+      
+      // Create main text with pixel font
+      const mainText = this.scene.add.text(
+        0, 0,
+        `WAVE ${waveNumber}`,
+        {
+          fontFamily: 'monospace',
+          fontSize: '32px',
+          fill: '#ff9900',
+          stroke: '#662200',
+          strokeThickness: 4
+        }
+      ).setOrigin(0.5);
+      container.add(mainText);
+      
+      // Create glitch effect elements - using RGB color split
+      const glitchText1 = this.scene.add.text(
+        2, 2,
+        `WAVE ${waveNumber}`,
+        {
+          fontFamily: 'monospace',
+          fontSize: '32px',
+          fill: '#00ffff',
+          alpha: 0.7
+        }
+      ).setOrigin(0.5);
+      
+      const glitchText2 = this.scene.add.text(
+        -2, -1,
+        `WAVE ${waveNumber}`,
+        {
+          fontFamily: 'monospace',
+          fontSize: '32px',
+          fill: '#ff00ff',
+          alpha: 0.7
+        }
+      ).setOrigin(0.5);
+      
+      container.add([glitchText1, glitchText2]);
+      
+      // Pixel noise rectangles - these will flash to create digital noise effect
+      const pixelNoise = [];
+      for (let i = 0; i < 12; i++) {
+        const rect = this.scene.add.rectangle(
+          Phaser.Math.Between(-60, 60),
+          Phaser.Math.Between(-35, 35),
+          Phaser.Math.Between(5, 20),
+          Phaser.Math.Between(2, 8),
+          0xffffff,
+          Phaser.Math.FloatBetween(0.3, 0.7)
+        );
+        pixelNoise.push(rect);
+        container.add(rect);
+      }
+      
+      // Initial scale animation - starts large and pulses down
+      this.scene.tweens.add({
+        targets: container,
+        scale: { from: 1.5, to: 1 },
+        duration: 300,
+        ease: 'Back.Out'
+      });
+      
+      // Set up glitch animation
+      let glitchCount = 0;
+      const maxGlitches = 10;
+      
+      const performGlitch = () => {
+        // Skip if container was already destroyed
+        if (!container || !container.active) return;
+        
+        // Random glitch movement for colored text layers
+        this.scene.tweens.add({
+          targets: glitchText1,
+          x: Phaser.Math.Between(-8, 8),
+          y: Phaser.Math.Between(-5, 5),
+          alpha: Phaser.Math.FloatBetween(0.5, 0.8),
+          duration: 50,
+          onComplete: () => {
+            if (++glitchCount < maxGlitches) {
+              // Schedule next glitch
+              this.scene.time.delayedCall(100, performGlitch);
+            } else {
+              // After glitches complete, start pulsing and fading
+              this.scene.tweens.add({
+                targets: container,
+                scale: 1.1,
+                duration: 800,
+                yoyo: true,
+                repeat: 1,
+                ease: 'Sine.InOut',
+                onComplete: () => {
+                  // Final fade out
+                  this.scene.tweens.add({
+                    targets: container,
+                    alpha: 0,
+                    scale: 1.4,
+                    duration: 400,
+                    onComplete: () => {
+                      if (container && container.destroy) {
+                        container.destroy();
+                      }
+                    }
+                  });
+                }
+              });
+            }
+          }
+        });
+        
+        // Animate second glitch text separately
+        this.scene.tweens.add({
+          targets: glitchText2,
+          x: Phaser.Math.Between(-8, 8),
+          y: Phaser.Math.Between(-5, 5),
+          alpha: Phaser.Math.FloatBetween(0.5, 0.8),
+          duration: 50
+        });
+      };
+      
+      // Start the first glitch after a short delay
+      this.scene.time.delayedCall(200, performGlitch);
+      
+      // Animate pixel noise rectangles separately
+      pixelNoise.forEach(rect => {
+        // Random movement and flickering
+        this.scene.tweens.add({
+          targets: rect,
+          alpha: { from: rect.alpha, to: 0 },
+          x: `+=${Phaser.Math.Between(-25, 25)}`,
+          y: `+=${Phaser.Math.Between(-15, 15)}`,
+          duration: Phaser.Math.Between(200, 600),
+          repeat: 3,
+          yoyo: true
+        });
+      });
+      
+      // Camera effects - stronger than level up 
+      this.shakeScreen(200, 0.008);
+      
+      // Create additional particle effects
+      if (this.scene.add.particles) {
+        const particles = this.scene.add.particles(x, y, 'flare', {
+          speed: 120,
+          lifespan: 1000,
+          quantity: 15,
+          scale: { start: 0.3, end: 0 },
+          blendMode: 'ADD',
+          emitting: false
+        });
+        
+        // One-time burst
+        particles.explode(30);
+        
+        // Clean up particles after animation
+        this.scene.time.delayedCall(1200, () => {
+          if (particles && particles.destroy) {
+            particles.destroy();
+          }
+        });
+      }
+      
+      return container;
+    } catch (error) {
+      console.error('Error creating wave change effect:', error);
       return null;
     }
   }
