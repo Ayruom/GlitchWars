@@ -95,6 +95,51 @@ export class Player {
   handleMovement() {
     if (!this.sprite || !this.sprite.body) return;
     
+    // Reset velocity
+    this.sprite.body.setVelocity(0);
+    
+    // Try to get input from InputManager first
+    if (this.scene.inputManager) {
+      const movementVector = this.scene.inputManager.getMovementVector();
+      
+      // Apply movement based on vector
+      this.sprite.body.setVelocityX(movementVector.x * this.speed);
+      this.sprite.body.setVelocityY(movementVector.y * this.speed);
+      
+      // Handle sprite flipping based on movement direction
+      if (movementVector.x < 0 && this.facingRight) {
+        this.facingRight = false;
+        this.sprite.scaleX = -1; // Flip sprite by setting negative scale
+        // Maintain the physics body's correct position
+        this.sprite.body.offset.x = this.sprite.width;
+      } else if (movementVector.x > 0 && !this.facingRight) {
+        this.facingRight = true;
+        this.sprite.scaleX = 1; // Normal scale
+        // Reset the physics body offset
+        this.sprite.body.offset.x = 0;
+      }
+      
+      // Debug movement if velocity changed
+      if (Math.abs(this.sprite.body.velocity.x) > 0 || Math.abs(this.sprite.body.velocity.y) > 0) {
+        // Periodically log player position (once per second)
+        const now = Date.now();
+        if (!this._lastPositionLog || now - this._lastPositionLog > 1000) {
+          console.debug('[PROD DEBUG] Player position:', {
+            x: this.sprite.x,
+            y: this.sprite.y,
+            velocity: {
+              x: this.sprite.body.velocity.x,
+              y: this.sprite.body.velocity.y
+            }
+          });
+          this._lastPositionLog = now;
+        }
+      }
+      
+      return;
+    }
+    
+    // Fallback to direct input handling (old method)
     // Get input handlers from the scene
     const { cursors, wasd } = this.scene;
     if (!cursors && !wasd) {
@@ -115,9 +160,6 @@ export class Player {
       console.debug('[PROD DEBUG] Player input:', inputState);
     }
     this._lastInputState = {...inputState};
-    
-    // Reset velocity
-    this.sprite.body.setVelocity(0);
     
     // Horizontal movement (prioritize WASD then arrow keys)
     if (wasd.left.isDown || cursors.left.isDown) {

@@ -340,17 +340,43 @@ export class EnemyManager {
     try {
       const currentTime = this.scene.time.now;
       
-      // Check if player can take damage
-      if (!this.scene.player.invulnerable && 
-          currentTime - this.scene.lastPlayerDamageTime > this.scene.playerDamageRate) {
+      // Set up last damage time if it doesn't exist
+      if (!this.scene.lastPlayerDamageRate) {
+        this.scene.playerDamageRate = 500; // Default damage cooldown
+      }
+      
+      if (!this.scene.lastPlayerDamageTime) {
+        this.scene.lastPlayerDamageTime = 0;
+      }
+      
+      // Check if player can take damage (not invulnerable and not on cooldown)
+      const playerInvulnerable = this.scene.player && this.scene.player.invulnerable;
+      if (!playerInvulnerable && 
+          currentTime - this.scene.lastPlayerDamageTime > (this.scene.playerDamageRate || 500)) {
+        
         this.scene.lastPlayerDamageTime = currentTime;
-        const baseDamage = enemySprite.damage || this.scene.enemyContactDamage;
-        const levelMultiplier = 1 - (this.level * 0.01);
+        const baseDamage = enemySprite.damage || 5; // Default damage if not set
+        const level = this.level || 1;
+        const levelMultiplier = 1 + (level * 0.05); // Increase damage with level
         const finalDamage = Math.max(1, Math.round(baseDamage * levelMultiplier));
         
-        // Apply damage to player
-        this.scene.damagePlayer(finalDamage);
-        this.scene.cameras.main.shake(100, 0.01);
+        // Use the PlayScene damagePlayer method we've created
+        if (typeof this.scene.damagePlayer === 'function') {
+          this.scene.damagePlayer(finalDamage);
+        } else {
+          // Fallback to direct player damage if the method doesn't exist
+          console.warn('damagePlayer method not found on scene, using direct damage');
+          if (this.scene.player && typeof this.scene.player.takeDamage === 'function') {
+            this.scene.player.takeDamage(finalDamage);
+          }
+        }
+        
+        // Add screen shake effect
+        try {
+          this.scene.cameras.main.shake(100, 0.01);
+        } catch (e) {
+          console.warn('Camera shake failed:', e);
+        }
       }
       
       // Damage the enemy every 5ms of contact
@@ -382,7 +408,12 @@ export class EnemyManager {
       this.updateEnemyHealthBar(enemySprite);
       
       if (enemySprite.currentHealth <= 0) {
-        this.scene.addScore(enemySprite.value || 10);
+        // Use levelManager to add score instead of calling a non-existent addScore method
+        if (this.scene.levelManager) {
+          this.scene.levelManager.addScore(enemySprite.value || 10);
+        } else {
+          console.warn('LevelManager not found, could not add score');
+        }
         this.destroyEnemy(enemySprite);
       }
     } catch (error) {

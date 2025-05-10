@@ -50,16 +50,6 @@ export class HealthBar {
       0x000000
     ).setOrigin(0, 0);
     
-    // Health bar border (white)
-    this.barBorder = this.scene.add.rectangle(
-      this.x, 
-      this.y, 
-      this.width, 
-      this.height, 
-      0x000000
-    ).setOrigin(0, 0)
-    .setStrokeStyle(2, 0xffffff, 1);
-    
     // Health bar fill (starts green)
     this.barFill = this.scene.add.rectangle(
       this.x + 2, // +2 padding from left
@@ -68,6 +58,10 @@ export class HealthBar {
       this.height - 4, // -4 for top and bottom padding
       0x00ff00
     ).setOrigin(0, 0);
+    
+    // Create a separate border using graphics (more reliable than stroke style)
+    this.barBorder = this.scene.add.graphics();
+    this.drawBorder();
     
     // Store the initial width for scaling
     this.initialBarWidth = this.width - 4;
@@ -100,6 +94,18 @@ export class HealthBar {
   }
   
   /**
+   * Draw the border for the health bar
+   * @private
+   */
+  drawBorder() {
+    if (!this.barBorder) return;
+    
+    this.barBorder.clear();
+    this.barBorder.lineStyle(2, 0xffffff, 1);
+    this.barBorder.strokeRect(this.x, this.y, this.width, this.height);
+  }
+  
+  /**
    * Set the position of the health bar
    * @param {number} x - X position
    * @param {number} y - Y position
@@ -117,11 +123,12 @@ export class HealthBar {
     this.barBackground.x += diffX;
     this.barBackground.y += diffY;
     
-    this.barBorder.x += diffX;
-    this.barBorder.y += diffY;
-    
     this.barFill.x += diffX;
     this.barFill.y += diffY;
+    
+    if (this.barBorder) {
+      this.drawBorder();
+    }
     
     if (this.healthLabel) {
       this.healthLabel.x += diffX;
@@ -148,7 +155,6 @@ export class HealthBar {
     
     // Resize components
     this.barBackground.setSize(width, height);
-    this.barBorder.setSize(width, height);
     
     // Resize the fill bar initially (it will be scaled by current health)
     this.initialBarWidth = width - 4;
@@ -156,6 +162,9 @@ export class HealthBar {
     
     // Position the fill bar correctly
     this.barFill.setPosition(this.x + 2, this.y + 2);
+    
+    // Redraw the border with updated dimensions
+    this.drawBorder();
     
     // Update health text position if it exists
     if (this.healthText) {
@@ -294,6 +303,9 @@ export class HealthBar {
     this.setPosition(this.x, healthBarY);
     this.setSize(healthBarWidth, healthBarHeight);
     this.setFontSize(fontSize);
+    
+    // Ensure border is redrawn
+    this.drawBorder();
   }
   
   /**
@@ -301,9 +313,14 @@ export class HealthBar {
    */
   destroy() {
     if (this.barBackground) this.barBackground.destroy();
-    if (this.barBorder) this.barBorder.destroy();
     if (this.barFill) this.barFill.destroy();
     if (this.healthLabel) this.healthLabel.destroy();
     if (this.healthText) this.healthText.destroy();
+    
+    // Clear and destroy the graphics object
+    if (this.barBorder) {
+      this.barBorder.clear();
+      this.barBorder.destroy();
+    }
   }
 }

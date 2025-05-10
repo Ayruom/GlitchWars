@@ -1,231 +1,125 @@
-// filepath: /Users/mouryagandalla/Documents/Projects/Hackathon1/retro-pixel-app/retro-pixel-app/src/game/entities/Enemy.js
 import Phaser from 'phaser';
 
 export class Enemy {
+  /**
+   * Create a new enemy entity
+   * @param {Phaser.Scene} scene - The scene this enemy belongs to
+   * @param {number} x - Initial x position
+   * @param {number} y - Initial y position
+   * @param {Object} config - Configuration object
+   */
   constructor(scene, x, y, config = {}) {
     this.scene = scene;
-    this.config = config;
     
-    // Enemy properties
+    // Set default properties
     this.maxHealth = config.maxHealth || 100;
-    this.currentHealth = config.maxHealth || 100;
-    this.baseSpeed = config.speed || 100;
+    this.currentHealth = this.maxHealth;
+    this.speed = config.speed || 100;
     this.damage = config.damage || 5;
     this.value = config.value || 10;
-    this.side = config.side || 0; // Spawn side
-    this.lastDamageTime = 0;
-    this.healthBar = null;
-    this.healthBarBg = null;
+    this.side = config.side || 0;
     
-    // Create the enemy sprite
-    this.sprite = this.createSprite(x, y, config.spriteKey);
-  }
-  
-  /**
-   * Create the enemy sprite with proper physics
-   */
-  createSprite(x, y, spriteKey) {
+    // Create the sprite
+    const spriteKey = config.spriteKey || 'enemyLeft';
+    
     try {
-      // Create the enemy sprite
-      const sprite = this.scene.physics.add.sprite(x, y, spriteKey);
+      // Create sprite with physics
+      this.sprite = scene.physics.add.sprite(x, y, spriteKey);
       
-      // Set the size of the enemy sprite
-      sprite.setDisplaySize(40, 40);
+      // Enable physics body
+      this.sprite.setCollideWorldBounds(false);
       
-      // Add physics to the sprite
-      this.scene.physics.world.enable(sprite);
+      // Add properties to the sprite for easy access
+      this.sprite.maxHealth = this.maxHealth;
+      this.sprite.currentHealth = this.currentHealth;
+      this.sprite.baseSpeed = this.speed;
+      this.sprite.damage = this.damage;
+      this.sprite.value = this.value;
       
-      // Add enemy properties to the sprite for easy access
-      sprite.maxHealth = this.maxHealth;
-      sprite.currentHealth = this.currentHealth;
-      sprite.baseSpeed = this.baseSpeed;
-      sprite.damage = this.damage;
-      sprite.value = this.value;
-      sprite.spawnSide = this.side;
-      
-      // Create health bar
-      this.createHealthBar(sprite);
-      
-      return sprite;
+      // Create health bar for this enemy
+      this.createHealthBar();
     } catch (error) {
-      console.error('Error creating enemy sprite:', error);
-      return this.createFallbackSprite(x, y);
+      console.error('Error creating enemy:', error);
+      // Create a fallback sprite if normal creation fails
+      this.createFallbackSprite(x, y);
     }
   }
   
   /**
-   * Create a fallback sprite if image loading fails
+   * Create a fallback sprite if normal sprite creation fails
+   * @param {number} x - X position
+   * @param {number} y - Y position
    */
   createFallbackSprite(x, y) {
-    // Create a red rectangle as the enemy (fallback)
-    const sprite = this.scene.add.rectangle(x, y, 30, 30, 0xff0000);
-    
-    // Add physics to the rectangle
-    this.scene.physics.add.existing(sprite);
-    
-    // Add enemy properties to the sprite for easy access
-    sprite.maxHealth = this.maxHealth;
-    sprite.currentHealth = this.currentHealth;
-    sprite.baseSpeed = this.baseSpeed;
-    sprite.damage = this.damage;
-    sprite.value = this.value;
-    
-    // Create health bar
-    this.createHealthBar(sprite);
-    
-    return sprite;
-  }
-  
-  /**
-   * Create health bar for the enemy
-   */
-  createHealthBar(sprite) {
     try {
-      // Black background for health bar
-      sprite.healthBarBg = this.scene.add.rectangle(
-        sprite.x - 10, 
-        sprite.y - 15, 
-        22, 
-        6, 
-        0x000000
-      );
+      // Create a simple rectangle as fallback
+      const graphics = this.scene.add.graphics();
+      graphics.fillStyle(0xff0000);
+      graphics.fillRect(0, 0, 40, 40);
       
-      // Yellow health bar at full health
-      sprite.healthBar = this.scene.add.rectangle(
-        sprite.x - 10, 
-        sprite.y - 15, 
-        20, 
-        4, 
-        0xFFFF00 // Yellow color for full health
-      );
+      // Generate texture from graphics
+      const textureKey = 'fallbackEnemy' + Date.now();
+      graphics.generateTexture(textureKey, 40, 40);
       
-      // Store references for updating
-      this.healthBar = sprite.healthBar;
-      this.healthBarBg = sprite.healthBarBg;
+      // Clear graphics after generating texture
+      graphics.clear();
+      
+      // Create sprite with new texture
+      this.sprite = this.scene.physics.add.sprite(x, y, textureKey);
+      
+      // Set properties on sprite
+      this.sprite.maxHealth = this.maxHealth;
+      this.sprite.currentHealth = this.currentHealth;
+      this.sprite.baseSpeed = this.speed;
+      this.sprite.damage = this.damage;
+      this.sprite.value = this.value;
+      
+      // Create health bar
+      this.createHealthBar();
     } catch (error) {
-      console.error('Error creating enemy health bar:', error);
+      console.error('Failed to create fallback enemy sprite:', error);
     }
   }
   
   /**
-   * Update enemy logic - called in the scene's update method
+   * Create a health bar for the enemy
    */
-  update() {
-    if (!this.sprite || !this.sprite.active) return;
-    
-    this.updateMovement();
-    this.updateHealthBar();
-  }
-  
-  /**
-   * Update enemy movement to follow player
-   */
-  updateMovement() {
+  createHealthBar() {
     try {
-      if (!this.sprite || !this.sprite.active) return;
+      // Create health bar background (gray)
+      this.sprite.healthBarBg = this.scene.add.rectangle(
+        this.sprite.x - 10,
+        this.sprite.y - 15,
+        20,
+        2,
+        0x888888
+      ).setOrigin(0, 0.5);
       
-      // Get the player reference - handle both direct sprite and Player class instances
-      const player = this.scene.player ? (this.scene.player.sprite || this.scene.player) : null;
-      if (!player || !player.active) return;
-      
-      // Calculate distance to player
-      const distance = Phaser.Math.Distance.Between(
-        this.sprite.x, this.sprite.y,
-        player.x, player.y
-      );
-      
-      // Get texture keys from scene if available (use enemyManager or direct from scene)
-      const enemyLeftKey = this.scene.enemyManager?.enemyLeftKey || this.scene.enemyLeftKey || 'enemyLeft';
-      const enemyRightKey = this.scene.enemyManager?.enemyRightKey || this.scene.enemyRightKey || 'enemyRight';
-      
-      // Update sprite based on position relative to player
-      if (this.sprite.x < player.x) {
-        try {
-          if (this.sprite.setTexture) {
-            this.sprite.setTexture(enemyRightKey);
-          }
-        } catch (error) {
-          console.debug('[PROD DEBUG] Failed to set enemy right texture:', error.message);
-        }
-      } else {
-        try {
-          if (this.sprite.setTexture) {
-            this.sprite.setTexture(enemyLeftKey);
-          }
-        } catch (error) {
-          console.debug('[PROD DEBUG] Failed to set enemy left texture:', error.message);
-        }
-      }
-      
-      // Dynamic speed based on distance (faster when further away)
-      const minSpeed = this.sprite.baseSpeed * 0.5;
-      const maxSpeed = this.sprite.baseSpeed * 1.2;
-      const speedFactor = Math.min(1, Math.max(0.5, distance / 300));
-      const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
-      
-      // Move towards player
-      this.scene.physics.moveToObject(this.sprite, player, speed);
+      // Create health bar (initially green)
+      this.sprite.healthBar = this.scene.add.rectangle(
+        this.sprite.x - 10,
+        this.sprite.y - 15,
+        20,
+        2,
+        0x00ff00
+      ).setOrigin(0, 0.5);
     } catch (error) {
-      console.error('Error updating enemy movement:', error);
+      console.error('Failed to create enemy health bar:', error);
     }
   }
   
   /**
-   * Update enemy health bar position and fill
-   */
-  updateHealthBar() {
-    try {
-      if (!this.sprite || !this.sprite.active || !this.healthBar || !this.healthBarBg) return;
-      
-      // Update health bar position
-      this.healthBar.x = this.sprite.x - 10;
-      this.healthBar.y = this.sprite.y - 15;
-      
-      this.healthBarBg.x = this.sprite.x - 10;
-      this.healthBarBg.y = this.sprite.y - 15;
-      
-      // Update health bar width based on health percentage
-      const healthPercent = this.sprite.currentHealth / this.sprite.maxHealth;
-      this.healthBar.width = Math.max(0, 20 * healthPercent);
-      
-      // Update color based on health percentage
-      let color;
-      if (healthPercent === 1) {
-        color = { r: 255, g: 255, b: 0 }; // Yellow
-      } else {
-        // Green to red gradient
-        color = Phaser.Display.Color.Interpolate.ColorWithColor(
-          { r: 0, g: 255, b: 0 }, // Green
-          { r: 255, g: 0, b: 0 }, // Red
-          100,
-          100 - Math.floor(healthPercent * 100)
-        );
-      }
-      this.healthBar.fillColor = Phaser.Display.Color.GetColor(color.r, color.g, color.b);
-    } catch (error) {
-      console.error('Error updating enemy health bar:', error);
-    }
-  }
-  
-  /**
-   * Apply damage to the enemy
-   * @param {number} amount - Damage amount
-   * @returns {boolean} - True if enemy died from this damage
+   * Update enemy health
+   * @param {number} amount - Amount of damage (positive) or healing (negative)
+   * @returns {boolean} - True if enemy died
    */
   takeDamage(amount) {
-    if (!this.sprite || !this.sprite.active) return false;
+    if (!this.sprite) return true;
     
-    // Apply damage
     this.sprite.currentHealth = Math.max(0, this.sprite.currentHealth - amount);
-    this.currentHealth = this.sprite.currentHealth;
     
-    // Update health bar color
-    this.updateHealthBar();
-    
-    // Check if enemy is dead
+    // Check if dead
     if (this.sprite.currentHealth <= 0) {
-      this.scene.addScore(this.sprite.value || 10);
-      this.destroy();
       return true;
     }
     
@@ -233,106 +127,33 @@ export class Enemy {
   }
   
   /**
-   * Create visual effect for enemy destruction
+   * Get enemy position
+   * @returns {Object} - Position object with x and y coordinates
    */
-  createDestroyEffect() {
-    try {
-      if (!this.sprite || !this.sprite.active) return;
-      
-      // Random destruction effect
-      const effectType = Phaser.Math.Between(1, 3);
-      switch (effectType) {
-        case 1: // Pop effect
-          this.scene.tweens.add({
-            targets: this.sprite,
-            scaleX: 0,
-            scaleY: 0,
-            duration: 300,
-            onComplete: () => {
-              this.clearHealthBars();
-              this.sprite.destroy();
-            },
-          });
-          break;
-        case 2: { // Blast effect
-          const blast = this.scene.add.circle(this.sprite.x, this.sprite.y, 15, 0xff0000, 0.7);
-          this.scene.tweens.add({
-            targets: blast,
-            alpha: 0,
-            scale: 2,
-            duration: 500,
-            onComplete: () => blast.destroy(),
-          });
-          this.clearHealthBars();
-          this.sprite.destroy();
-          break;
-        }
-        case 3: // Glitch effect
-          this.scene.tweens.add({
-            targets: this.sprite,
-            x: this.sprite.x + Phaser.Math.Between(-10, 10),
-            y: this.sprite.y + Phaser.Math.Between(-10, 10),
-            duration: 100,
-            yoyo: true,
-            repeat: 3,
-            onComplete: () => {
-              this.clearHealthBars();
-              this.sprite.destroy();
-            },
-          });
-          break;
-      }
-    } catch (error) {
-      console.error('Error creating enemy destroy effect:', error);
-      this.clearHealthBars();
-      if (this.sprite && this.sprite.destroy) {
-        this.sprite.destroy();
-      }
-    }
+  getPosition() {
+    if (!this.sprite) return { x: 0, y: 0 };
+    return { x: this.sprite.x, y: this.sprite.y };
   }
   
   /**
-   * Clear health bars
+   * Move toward a target position with current speed
+   * @param {number} targetX - Target X position
+   * @param {number} targetY - Target Y position
    */
-  clearHealthBars() {
-    try {
-      if (this.healthBar) this.healthBar.destroy();
-      if (this.healthBarBg) this.healthBarBg.destroy();
-      if (this.sprite) {
-        if (this.sprite.healthBar) this.sprite.healthBar.destroy();
-        if (this.sprite.healthBarBg) this.sprite.healthBarBg.destroy();
-      }
-    } catch (error) {
-      console.error('Error clearing health bars:', error);
-    }
-  }
-  
-  /**
-   * Check if enemy is offscreen and should be removed
-   */
-  isOffscreen() {
-    if (!this.sprite || !this.scene.config) return true;
+  moveToward(targetX, targetY) {
+    if (!this.sprite) return;
     
-    const buffer = 50;
-    const bounds = {
-      left: -buffer,
-      right: this.scene.config.width + buffer,
-      top: -buffer,
-      bottom: this.scene.config.height + buffer
-    };
-    
-    return (
-      this.sprite.x < bounds.left ||
-      this.sprite.x > bounds.right ||
-      this.sprite.y < bounds.top ||
-      this.sprite.y > bounds.bottom
-    );
+    this.scene.physics.moveTo(this.sprite, targetX, targetY, this.sprite.baseSpeed);
   }
   
   /**
-   * Clean up resources used by the enemy
+   * Destroy the enemy and its associated objects
    */
   destroy() {
-    this.createDestroyEffect();
+    if (this.sprite) {
+      if (this.sprite.healthBar) this.sprite.healthBar.destroy();
+      if (this.sprite.healthBarBg) this.sprite.healthBarBg.destroy();
+      this.sprite.destroy();
+    }
   }
 }
