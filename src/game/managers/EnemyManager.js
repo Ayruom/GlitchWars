@@ -32,18 +32,35 @@ export class EnemyManager {
     // Create enemy group with physics
     this.enemies = this.scene.physics.add.group();
     
-    // Get the player sprite reference
-    const playerSprite = this.scene.player?.sprite;
+    // Get the player reference - ensure we access the sprite if player is a Player class instance
+    const player = this.scene.player;
     
-    if (playerSprite) {
-      // Add collision detection between player sprite and enemies
+    if (player) {
+      const playerTarget = player.sprite || player;
+      
+      console.debug('[PROD DEBUG] Setting up player-enemy collision. Player type:', 
+        player.sprite ? 'Player class' : 'Direct sprite',
+        'Target object:', playerTarget);
+      
+      // Add collision detection between player and enemies
       this.scene.physics.add.collider(
-        playerSprite, 
+        playerTarget, 
         this.enemies, 
         this.handlePlayerEnemyCollision, 
         null, 
         this
       );
+      
+      // Add overlap detection as a backup in case collider fails
+      this.scene.physics.add.overlap(
+        playerTarget,
+        this.enemies,
+        this.handlePlayerEnemyCollision,
+        null,
+        this
+      );
+    } else {
+      console.error('[PROD DEBUG] No player found when setting up enemy collisions');
     }
   }
   
@@ -231,7 +248,8 @@ export class EnemyManager {
     try {
       if (!enemySprite.active || !this.scene.player || !this.scene.player.sprite) return;
       
-      const playerSprite = this.scene.player.sprite;
+      const player = this.scene.player.sprite || this.scene.player;
+      if (!player.active) return;
       
       // Calculate distance to player
       const distance = Phaser.Math.Distance.Between(
@@ -240,10 +258,22 @@ export class EnemyManager {
       );
       
       // Update sprite based on position relative to player
-      if (enemySprite.x < playerSprite.x) {
-        enemySprite.setTexture(this.enemyRightKey);
+      if (enemySprite.x < player.x) {
+        if (enemySprite.setTexture) {
+          try {
+            enemySprite.setTexture(this.enemyRightKey);
+          } catch (err) {
+            console.debug('Failed to set enemy texture:', err);
+          }
+        }
       } else {
-        enemySprite.setTexture(this.enemyLeftKey);
+        if (enemySprite.setTexture) {
+          try {
+            enemySprite.setTexture(this.enemyLeftKey);
+          } catch (err) {
+            console.debug('Failed to set enemy texture:', err);
+          }
+        }
       }
       
       // Dynamic speed based on distance (faster when further away)

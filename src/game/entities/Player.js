@@ -97,7 +97,24 @@ export class Player {
     
     // Get input handlers from the scene
     const { cursors, wasd } = this.scene;
-    if (!cursors || !wasd) return;
+    if (!cursors && !wasd) {
+      console.debug('[PROD DEBUG] Player: Input handlers not found in scene');
+      return;
+    }
+    
+    // Debug input state
+    const inputState = {
+      left: wasd?.left?.isDown || cursors?.left?.isDown,
+      right: wasd?.right?.isDown || cursors?.right?.isDown,
+      up: wasd?.up?.isDown || cursors?.up?.isDown,
+      down: wasd?.down?.isDown || cursors?.down?.isDown,
+    };
+    
+    // Only log when inputs change to avoid console spam
+    if (this._lastInputState && JSON.stringify(this._lastInputState) !== JSON.stringify(inputState)) {
+      console.debug('[PROD DEBUG] Player input:', inputState);
+    }
+    this._lastInputState = {...inputState};
     
     // Reset velocity
     this.sprite.body.setVelocity(0);
@@ -128,8 +145,22 @@ export class Player {
     // Vertical movement (prioritize WASD then arrow keys)
     if (wasd.up.isDown || cursors.up.isDown) {
       this.sprite.body.setVelocityY(-this.speed);
-    } else if (wasd.down.isDown || cursors.down.isDown) {
+    } else if (inputState.down) {
       this.sprite.body.setVelocityY(this.speed);
+    }
+    
+    // Periodically log player position (once per second)
+    const now = Date.now();
+    if (!this._lastPositionLog || now - this._lastPositionLog > 1000) {
+      console.debug('[PROD DEBUG] Player position:', {
+        x: this.sprite.x,
+        y: this.sprite.y,
+        velocity: {
+          x: this.sprite.body.velocity.x,
+          y: this.sprite.body.velocity.y
+        }
+      });
+      this._lastPositionLog = now;
     }
   }
   

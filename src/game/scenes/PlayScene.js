@@ -85,35 +85,115 @@ export class PlayScene extends BaseScene {
   }
 
   /**
+   * Preload assets needed for the game
+   */
+  preload() {
+    try {
+      // Load the enemy sprite images with proper paths
+      // Using unique keys with timestamps to avoid conflicts
+      this.enemyLeftKey = 'enemyLeft_' + Date.now();
+      this.enemyRightKey = 'enemyRight_' + Date.now();
+      this.heroImageKey = 'playerCharacter_' + Date.now();
+      
+      // Get the appropriate hero image path
+      let heroImagePath = this.getHeroImagePath();
+      
+      console.debug('[PROD DEBUG] Loading game assets');
+      console.debug('[PROD DEBUG] Loading hero image:', heroImagePath);
+      
+      this.load.image(this.heroImageKey, heroImagePath);
+      this.load.image(this.enemyLeftKey, 'assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40LeftFacing.png');
+      this.load.image(this.enemyRightKey, 'assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40rightFacing.png');
+      
+      // Debug asset loading events
+      this.load.on('filecomplete', (key) => {
+        console.debug(`[PROD DEBUG] Asset loaded successfully: ${key}`);
+      });
+      
+      this.load.on('loaderror', (fileObj) => {
+        console.error(`[PROD DEBUG] Error loading asset: ${fileObj.key} from ${fileObj.url}`);
+        // Create fallback texture if enemy images fail to load
+        if (fileObj.key === this.enemyLeftKey || fileObj.key === this.enemyRightKey) {
+          this.createFallbackEnemyTextures(fileObj.key);
+        }
+      });
+    } catch (error) {
+      console.error('[PROD DEBUG] Error in preload:', error);
+    }
+  }
+
+  /**
    * Create game objects, setup physics, and initialize the scene
    */
   create() {
     try {
+      console.debug('[PROD DEBUG] PlayScene.create started');
+      
       // Create a black background
       this.add.rectangle(0, 0, this.config.width, this.config.height, 0x000000)
         .setOrigin(0)
         .setDepth(-1);
       
-      // Get the appropriate hero image path
-      const heroImageKey = 'playerCharacter';
-      let heroImagePath = this.getHeroImagePath();
+      // Share the unique texture keys with the enemy manager
+      if (!this.enemyManager) {
+        // Create temporary enemy manager if needed for updating keys
+        this.enemyManager = {};
+      }
       
-      // Pre-load the hero image
-      this.load.image(heroImageKey, heroImagePath);
+      // Pass the texture keys to the enemy manager
+      this.enemyLeftKey = this.enemyLeftKey || 'enemyLeft_' + Date.now();
+      this.enemyRightKey = this.enemyRightKey || 'enemyRight_' + Date.now();
+      this.heroImageKey = this.heroImageKey || 'playerCharacter_' + Date.now();
       
-      // Once the image is loaded, set up the game elements
-      this.load.once('complete', () => {
-        this.createPlayer();
-        this.setupGameElements();
-        this.startGameLoop();
+      console.debug('[PROD DEBUG] Using texture keys:', {
+        left: this.enemyLeftKey,
+        right: this.enemyRightKey,
+        hero: this.heroImageKey
       });
       
-      // Start the loader
-      this.load.start();
+      // Create the player and game elements
+      this.createPlayer();
+      this.setupGameElements();
+      this.startGameLoop();
     } catch (error) {
       console.error('Error in PlayScene.create:', error);
       // Create minimal fallback UI to show something
       this.createFallbackUI();
+    }
+  }
+
+  /**
+   * Create fallback textures for enemies when image loading fails
+   */
+  createFallbackEnemyTextures(key) {
+    try {
+      // Create a graphics object
+      const graphics = this.add.graphics();
+      
+      // Draw a red rectangle
+      graphics.fillStyle(0xff0000);
+      graphics.fillRect(0, 0, 40, 40);
+      
+      // Add an arrow to indicate direction
+      graphics.fillStyle(0xffffff);
+      
+      if (key === this.enemyLeftKey) {
+        // Left-pointing arrow
+        graphics.fillTriangle(30, 20, 10, 10, 10, 30);
+      } else {
+        // Right-pointing arrow
+        graphics.fillTriangle(10, 20, 30, 10, 30, 30);
+      }
+      
+      // Generate texture from graphics
+      graphics.generateTexture(key, 40, 40);
+      
+      // Clear graphics
+      graphics.clear();
+      
+      console.debug(`[PROD DEBUG] Created fallback texture for ${key}`);
+    } catch (error) {
+      console.error(`Error creating fallback texture for ${key}:`, error);
     }
   }
 
@@ -187,7 +267,7 @@ export class PlayScene extends BaseScene {
     try {
       // Create the player using the Player class with appropriate configuration
       this.player = new Player(this, this.config.width / 2, this.config.height / 2, {
-        spriteKey: 'playerCharacter',
+        spriteKey: this.heroImageKey,
         maxHealth: this.playerMaxHealth,
         currentHealth: this.playerCurrentHealth,
         speed: this.playerSpeed,
@@ -252,8 +332,18 @@ export class PlayScene extends BaseScene {
    * Setup enemy group and collision detection using EnemyManager
    */
   setupEnemies() {
-    // Initialize the enemy manager with current scene
+    // Initialize the enemy manager with current scene and pass texture keys
     this.enemyManager = new EnemyManager(this);
+    
+    // Update the enemy sprite key references in the manager
+    if (this.enemyManager) {
+      this.enemyManager.enemyLeftKey = this.enemyLeftKey;
+      this.enemyManager.enemyRightKey = this.enemyRightKey;
+      console.debug('[PROD DEBUG] Updated enemy manager with texture keys:', {
+        left: this.enemyManager.enemyLeftKey,
+        right: this.enemyManager.enemyRightKey
+      });
+    }
     
     // Store a reference to the enemies group
     this.enemies = this.enemyManager.enemies;
@@ -398,12 +488,17 @@ export class PlayScene extends BaseScene {
     try {
       if (!this.player) return;
       
-      // Use Player class's update method
-      this.player.update();
+      // Use the Player class's update method instead of handling movement directly
+      if (typeof this.player.update === 'function') {
+        this.player.update(time, delta);
+      } else {
+        // Fallback to direct handling if the player doesn't have an update method
+        this.handlePlayerMovement();
+      }
       
       // Use EnemyManager's update method
       if (this.enemyManager) {
-        this.enemyManager.update();
+        this.enemyManager.update(time, delta);
       }
       
       this.updateHealthBars();

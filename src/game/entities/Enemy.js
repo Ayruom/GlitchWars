@@ -133,11 +133,27 @@ export class Enemy {
         playerSprite.x, playerSprite.y
       );
       
+      // Get texture keys from scene if available (use enemyManager or direct from scene)
+      const enemyLeftKey = this.scene.enemyManager?.enemyLeftKey || this.scene.enemyLeftKey || 'enemyLeft';
+      const enemyRightKey = this.scene.enemyManager?.enemyRightKey || this.scene.enemyRightKey || 'enemyRight';
+      
       // Update sprite based on position relative to player
       if (this.sprite.x < playerSprite.x) {
-        this.sprite.setTexture('enemyRight');
+        try {
+          if (this.sprite.setTexture) {
+            this.sprite.setTexture(enemyRightKey);
+          }
+        } catch (error) {
+          console.debug('[PROD DEBUG] Failed to set enemy right texture:', error.message);
+        }
       } else {
-        this.sprite.setTexture('enemyLeft');
+        try {
+          if (this.sprite.setTexture) {
+            this.sprite.setTexture(enemyLeftKey);
+          }
+        } catch (error) {
+          console.debug('[PROD DEBUG] Failed to set enemy left texture:', error.message);
+        }
       }
       
       // Dynamic speed based on distance (faster when further away)
