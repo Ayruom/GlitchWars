@@ -43,24 +43,25 @@ export class HealthBar {
   createHealthBar() {
     // Health bar background (black)
     this.barBackground = this.scene.add.rectangle(
-      this.x, 
-      this.y, 
-      this.width, 
-      this.height, 
+      this.x,
+      this.y,
+      this.width,
+      this.height,
       0x000000
-    ).setOrigin(0, 0);
-    
+    ).setOrigin(0, 0).setScrollFactor(0);
+
     // Health bar fill (starts green)
     this.barFill = this.scene.add.rectangle(
-      this.x + 2, // +2 padding from left
-      this.y + 2, // +2 padding from top
-      this.width - 4, // -4 for left and right padding
-      this.height - 4, // -4 for top and bottom padding
+      this.x + 2,
+      this.y + 2,
+      this.width - 4,
+      this.height - 4,
       0x00ff00
-    ).setOrigin(0, 0);
-    
+    ).setOrigin(0, 0).setScrollFactor(0);
+
     // Create a separate border using graphics (more reliable than stroke style)
     this.barBorder = this.scene.add.graphics();
+    this.barBorder.setScrollFactor(0);
     this.drawBorder();
     
     // Store the initial width for scaling
@@ -69,27 +70,27 @@ export class HealthBar {
     // Add health text label if needed
     if (this.label) {
       this.healthLabel = this.scene.add.text(
-        this.x, 
-        this.y - this.fontSize - 5, 
-        this.label, 
+        this.x,
+        this.y - this.fontSize - 5,
+        this.label,
         {
           fontSize: `${this.fontSize}px`,
           fill: '#ffffff'
         }
-      );
+      ).setScrollFactor(0);
     }
-    
+
     // Add health value text if needed
     if (this.showText) {
       this.healthText = this.scene.add.text(
-        this.x + this.width + 10, 
-        this.y + 2, 
-        `${Math.ceil(this.currentHealth)}/${this.maxHealth}`, 
+        this.x + this.width + 10,
+        this.y + 2,
+        `${Math.ceil(this.currentHealth)}/${this.maxHealth}`,
         {
           fontSize: `${this.fontSize}px`,
           fill: '#ffffff'
         }
-      );
+      ).setScrollFactor(0);
     }
   }
   

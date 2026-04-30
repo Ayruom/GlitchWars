@@ -37,6 +37,7 @@ export class GameOverScreen {
     
     // Create centered container for game over elements
     this.container = this.scene.add.container(0, 0);
+    this.container.setScrollFactor(0);
     
     // Black overlay
     this.overlay = this.scene.add.rectangle(

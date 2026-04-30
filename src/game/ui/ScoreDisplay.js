@@ -37,47 +37,47 @@ export class ScoreDisplay {
   createUI() {
     // Score text
     this.scoreText = this.scene.add.text(
-      this.x, 
-      this.y, 
-      `Score: ${this.score}`, 
-      { 
-        fontSize: `${this.fontSize}px`, 
+      this.x,
+      this.y,
+      `Score: ${this.score}`,
+      {
+        fontSize: `${this.fontSize}px`,
         fill: this.color
       }
-    );
-    
+    ).setScrollFactor(0);
+
     // Level text
     this.levelText = this.scene.add.text(
-      this.x, 
-      this.y + this.fontSize + this.spacing, 
-      `Level: ${this.level}`, 
+      this.x,
+      this.y + this.fontSize + this.spacing,
+      `Level: ${this.level}`,
       {
         fontSize: `${this.fontSize}px`,
         fill: this.color
       }
-    );
-    
+    ).setScrollFactor(0);
+
     // Wave text
     this.waveText = this.scene.add.text(
-      this.x, 
-      this.y + (this.fontSize + this.spacing) * 2, 
-      `Wave: ${this.wave}`, 
+      this.x,
+      this.y + (this.fontSize + this.spacing) * 2,
+      `Wave: ${this.wave}`,
       {
         fontSize: `${this.fontSize}px`,
         fill: this.color
       }
-    );
-    
+    ).setScrollFactor(0);
+
     // Character info
     this.characterText = this.scene.add.text(
-      this.scene.scale.width - 16, 
-      this.y, 
-      `Hero: ${this.characterName}`, 
+      this.scene.scale.width - 16,
+      this.y,
+      `Hero: ${this.characterName}`,
       {
         fontSize: `${this.fontSize}px`,
         fill: this.color
       }
-    ).setOrigin(1, 0);
+    ).setOrigin(1, 0).setScrollFactor(0);
   }
   
   /**
