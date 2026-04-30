@@ -123,33 +123,29 @@ export class EnemyManager {
       let x, y;
       let spriteKey;
       
-      const config = this.scene.config || {
-        width: this.scene.game.config.width,
-        height: this.scene.game.config.height
-      };
-      
+      const sceneWidth = this.scene.scale.width;
+      const sceneHeight = this.scene.scale.height;
+
       switch(side) {
         case 0: // top
-          x = Phaser.Math.Between(0, config.width);
+          x = Phaser.Math.Between(0, sceneWidth);
           y = -buffer;
-          // Compare with player's x position to determine facing
           spriteKey = (x < this.scene.player.sprite.x) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 1: // right
-          x = config.width + buffer;
-          y = Phaser.Math.Between(0, config.height);
-          spriteKey = this.enemyLeftKey; // Always face left when spawning from right
+          x = sceneWidth + buffer;
+          y = Phaser.Math.Between(0, sceneHeight);
+          spriteKey = this.enemyLeftKey;
           break;
         case 2: // bottom
-          x = Phaser.Math.Between(0, config.width);
-          y = config.height + buffer;
-          // Compare with player's x position to determine facing
+          x = Phaser.Math.Between(0, sceneWidth);
+          y = sceneHeight + buffer;
           spriteKey = (x < this.scene.player.sprite.x) ? this.enemyRightKey : this.enemyLeftKey;
           break;
         case 3: // left
           x = -buffer;
-          y = Phaser.Math.Between(0, config.height);
-          spriteKey = this.enemyRightKey; // Always face right when spawning from left
+          y = Phaser.Math.Between(0, sceneHeight);
+          spriteKey = this.enemyRightKey;
           break;
       }
       
@@ -219,17 +215,12 @@ export class EnemyManager {
    * @returns {boolean} - True if the enemy is off-screen
    */
   isEnemyOffscreen(enemySprite) {
-    const config = this.scene.config || {
-      width: this.scene.game.config.width,
-      height: this.scene.game.config.height
-    };
-    
     const buffer = 50;
     const bounds = {
       left: -buffer,
-      right: config.width + buffer,
+      right: this.scene.scale.width + buffer,
       top: -buffer,
-      bottom: config.height + buffer
+      bottom: this.scene.scale.height + buffer
     };
     
     return (
