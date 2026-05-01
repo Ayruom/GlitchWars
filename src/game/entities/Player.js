@@ -219,17 +219,19 @@ export class Player {
     this.currentHealth = Math.max(0, this.currentHealth - amount);
     
     // Visual feedback - red flash
-    const originalFillColor = this.sprite.fillColor;
-    this.sprite.fillColor = 0xff0000;
-    
+    this.sprite.setTint(0xff0000);
+    this.scene.time.delayedCall(150, () => {
+      if (this.sprite && this.sprite.active) {
+        this.sprite.clearTint();
+      }
+    });
+
     // Make player temporarily invulnerable
     this.invulnerable = true;
-    
-    // Reset after invulnerability period
+
+    // Reset invulnerability after 1 second
     this.scene.time.delayedCall(1000, () => {
       if (this.sprite && this.sprite.active) {
-        // Reset the color
-        this.sprite.fillColor = originalFillColor || 0x00ff00;
         this.invulnerable = false;
       }
     });
