@@ -35,3 +35,17 @@ Three root causes identified and fixed:
 3. **GameOver screen not camera-fixed** (`GameOverScreen`): container missing `setScrollFactor(0)`. Fixed.
 
 <!-- Append new sessions below this line in the same format -->
+
+## Session: 2026-05-01
+
+### Issue #53 fixed (branch: claude-edits, commit: cfb24db)
+Created two missing Phaser scenes that were referenced in `MenuScene.js` but did not exist, causing a game-breaking crash when clicking Options or Credits in the menu.
+
+**Files created:**
+- `src/game/scenes/OptionsScene.js` — scene key `'OptionsScene'`, shows "SOUND: [COMING SOON]" placeholder and MOVE keybindings (Arrow/WASD)
+- `src/game/scenes/CreditsScene.js` — scene key `'CreditsScene'`, lists game title, MouryA6 / Mourya Gandalla, and tech stack
+
+**File modified:**
+- `src/components/Game.jsx` — added imports and registered both new scenes in the Phaser config `scene` array
+
+Both scenes extend `BaseScene`, call `super.create()`, pass `canGoBack: true` for the back button, apply `createGlitchEffect()` to their title, and use the green/magenta/cyan "Press Start 2P" theme consistent with all other scenes. Build passed clean (`npm run build`).

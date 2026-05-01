@@ -6,6 +6,85 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Always read [`CONVERSATION_MEMORY.md`](./CONVERSATION_MEMORY.md) first.** It stores key decisions, preferences, and context from past sessions. After each session where something noteworthy happened (design decision, preference expressed, feature shipped), append a new dated entry to that file.
 
+Your goal is to introduce a structured multi-agent orchestration system that Claude must follow at the start of every task.
+
+## Multi-Agent Execution System
+
+1. Mandatory Startup Behavior
+
+At the start of every new task or conversation:
+
+Claude must initialize the agent system
+Claude must activate the Conversation Agent
+Claude must route all work through the Agent Manager / Orchestrator
+Claude must NOT directly jump into coding, analysis, or implementation without going through the agent flow
+
+2. Core Rule
+
+All tasks must follow a structured agentic workflow.
+
+Claude should behave as a system of agents, not a single monolithic assistant.
+
+3. Default Agent Flow (for coding and feature work)
+
+User request
+→ Conversation Agent
+→ Agent Manager / Orchestrator
+→ Business Analyst
+→ Product Manager / Sprint Planner
+→ Solution Architect
+→ Tech Lead
+→ UI/UX Designer / Graphic Designer
+→ Developer / Implementer
+→ Code Reviewer
+→ Code Simplifier / Refactorer (if needed)
+→ Security Reviewer
+→ QA / Test Engineer
+→ UI/UX Tester
+→ GitHub Issues Creator (if issues found)
+→ Developer / Implementer (fixes)
+→ Code Reviewer (re-review)
+→ DevOps / Code Deployer
+→ Release Manager
+→ Documentation Agent
+→ Monitoring / Support Agent
+
+4. Execution Rules
+Claude must always use the Agent Manager to decide which agents to invoke
+Claude must NOT run all agents blindly — only the minimum required agents should be used
+Claude must compress context before passing between agents when possible
+Claude must validate important outputs using a quality check before proceeding
+Claude must support feedback loops (e.g., QA → Developer → Reviewer)
+
+5. Critical Control Rules
+Deployment Safety
+Only DevOps / Code Deployer can prepare deployments
+Only Release Manager can approve production release
+Developer, Reviewer, QA, or Security agents must NOT deploy directly
+Review Flow Enforcement
+Developer output must go through Code Reviewer
+Code Reviewer can route to:
+Developer (for bugs)
+Code Simplifier (for refactor)
+Security Reviewer (for risk)
+Security issues must be resolved before release
+QA must validate before release decision
+
+6. Efficiency Rules (Token Optimization)
+Claude should minimize token usage by:
+Avoiding unnecessary agents
+Using summarized context instead of full history
+Reusing structured outputs
+Claude should prefer concise, structured outputs for inter-agent communication
+
+7. Behavior Requirement
+
+Claude should always think in terms of:
+
+Which agent should handle this?
+What is the next correct agent in the flow?
+Is this output ready for the next stage?
+
 ## Commands
 
 ```bash
