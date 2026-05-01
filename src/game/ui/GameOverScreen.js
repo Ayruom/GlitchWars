@@ -77,7 +77,7 @@ export class GameOverScreen {
     // Add restart button
     this.restartButton = this.scene.add.text(
       centerX,
-      centerY + 80,
+      centerY + 70,
       'RESTART',
       {
         fontSize: '24px',
@@ -100,11 +100,38 @@ export class GameOverScreen {
       this.restartButton.setScale(1);
     })
     .on('pointerdown', () => this.restart());
-    
+
+    // Add main menu button
+    this.mainMenuButton = this.scene.add.text(
+      centerX,
+      centerY + 130,
+      'MAIN MENU',
+      {
+        fontSize: '24px',
+        fontFamily: this.fontFamily,
+        fill: '#00ffff',
+        stroke: '#000000',
+        strokeThickness: 4,
+        padding: { x: 20, y: 10 },
+        align: 'center'
+      }
+    )
+    .setOrigin(0.5)
+    .setInteractive({ useHandCursor: true })
+    .on('pointerover', () => {
+      this.mainMenuButton.setStyle({ fill: '#ff00ff' });
+      this.mainMenuButton.setScale(1.1);
+    })
+    .on('pointerout', () => {
+      this.mainMenuButton.setStyle({ fill: '#00ffff' });
+      this.mainMenuButton.setScale(1);
+    })
+    .on('pointerdown', () => this.scene.scene.start('MenuScene'));
+
     // Add restart instruction
     this.restartInstruction = this.scene.add.text(
       centerX,
-      centerY + 140,
+      centerY + 190,
       'Press R to restart',
       {
         fontSize: '16px',
@@ -113,13 +140,14 @@ export class GameOverScreen {
         align: 'center'
       }
     ).setOrigin(0.5);
-    
+
     // Add elements to container
     this.container.add([
       this.overlay,
       this.gameOverText,
       this.finalScoreText,
       this.restartButton,
+      this.mainMenuButton,
       this.restartInstruction
     ]);
     
@@ -190,8 +218,9 @@ export class GameOverScreen {
     // Update text positions
     this.gameOverText.setPosition(centerX, centerY - 80);
     this.finalScoreText.setPosition(centerX, centerY);
-    this.restartButton.setPosition(centerX, centerY + 80);
-    this.restartInstruction.setPosition(centerX, centerY + 140);
+    this.restartButton.setPosition(centerX, centerY + 70);
+    this.mainMenuButton.setPosition(centerX, centerY + 130);
+    this.restartInstruction.setPosition(centerX, centerY + 190);
     
     return this;
   }
