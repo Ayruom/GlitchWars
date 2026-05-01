@@ -4,6 +4,8 @@ import Phaser from 'phaser';
 import { BootScene } from '../game/scenes/BootScene';
 import { MenuScene } from '../game/scenes/MenuScene';
 import { PlayScene } from '../game/scenes/PlayScene';
+import { OptionsScene } from '../game/scenes/OptionsScene';
+import { CreditsScene } from '../game/scenes/CreditsScene';
 
 export function Game() {
   const gameContainerRef = useRef(null);
@@ -84,7 +86,9 @@ export function Game() {
         scene: [
           new BootScene({ width, height }),
           new MenuScene({ width, height }),
-          new PlayScene({ width, height })
+          new PlayScene({ width, height }),
+          new OptionsScene({ width, height }),
+          new CreditsScene({ width, height })
         ]
       };
       
