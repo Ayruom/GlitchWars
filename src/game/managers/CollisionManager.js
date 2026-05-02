@@ -41,8 +41,6 @@ export class CollisionManager {
       return this;
     }
     
-    console.debug('[PROD DEBUG] CollisionManager: Setting up collision detection');
-    
     // Set up physics collision between player and enemies
     this.setupPlayerEnemyCollision();
     
@@ -70,7 +68,6 @@ export class CollisionManager {
       this
     );
     
-    console.debug('[PROD DEBUG] CollisionManager: Player-enemy collision detection active');
   }
   
   /**

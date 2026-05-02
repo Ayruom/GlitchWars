@@ -119,23 +119,6 @@ export class Player {
         this.sprite.body.offset.x = 0;
       }
       
-      // Debug movement if velocity changed
-      if (Math.abs(this.sprite.body.velocity.x) > 0 || Math.abs(this.sprite.body.velocity.y) > 0) {
-        // Periodically log player position (once per second)
-        const now = Date.now();
-        if (!this._lastPositionLog || now - this._lastPositionLog > 1000) {
-          console.debug('[PROD DEBUG] Player position:', {
-            x: this.sprite.x,
-            y: this.sprite.y,
-            velocity: {
-              x: this.sprite.body.velocity.x,
-              y: this.sprite.body.velocity.y
-            }
-          });
-          this._lastPositionLog = now;
-        }
-      }
-      
       return;
     }
     
@@ -143,22 +126,15 @@ export class Player {
     // Get input handlers from the scene
     const { cursors, wasd } = this.scene;
     if (!cursors && !wasd) {
-      console.debug('[PROD DEBUG] Player: Input handlers not found in scene');
       return;
     }
-    
-    // Debug input state
+
     const inputState = {
       left: wasd?.left?.isDown || cursors?.left?.isDown,
       right: wasd?.right?.isDown || cursors?.right?.isDown,
       up: wasd?.up?.isDown || cursors?.up?.isDown,
       down: wasd?.down?.isDown || cursors?.down?.isDown,
     };
-    
-    // Only log when inputs change to avoid console spam
-    if (this._lastInputState && JSON.stringify(this._lastInputState) !== JSON.stringify(inputState)) {
-      console.debug('[PROD DEBUG] Player input:', inputState);
-    }
     this._lastInputState = {...inputState};
     
     // Horizontal movement (prioritize WASD then arrow keys)
@@ -191,19 +167,6 @@ export class Player {
       this.sprite.body.setVelocityY(this.speed);
     }
     
-    // Periodically log player position (once per second)
-    const now = Date.now();
-    if (!this._lastPositionLog || now - this._lastPositionLog > 1000) {
-      console.debug('[PROD DEBUG] Player position:', {
-        x: this.sprite.x,
-        y: this.sprite.y,
-        velocity: {
-          x: this.sprite.body.velocity.x,
-          y: this.sprite.body.velocity.y
-        }
-      });
-      this._lastPositionLog = now;
-    }
   }
   
   /**
