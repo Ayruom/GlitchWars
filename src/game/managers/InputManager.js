@@ -42,8 +42,6 @@ export class InputManager {
     this.keySpace = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.keyEsc = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     
-    // Debug logging of key mappings
-    console.debug('[PROD DEBUG] Input Manager: Input controls setup complete');
   }
   
   /**

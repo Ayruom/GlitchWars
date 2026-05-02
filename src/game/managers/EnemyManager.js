@@ -37,20 +37,16 @@ export class EnemyManager {
     
     if (player) {
       const playerTarget = player.sprite || player;
-      
-      console.debug('[PROD DEBUG] Setting up player-enemy collision. Player type:', 
-        player.sprite ? 'Player class' : 'Direct sprite',
-        'Target object:', playerTarget);
-      
+
       // Add collision detection between player and enemies
       this.scene.physics.add.collider(
-        playerTarget, 
-        this.enemies, 
-        this.handlePlayerEnemyCollision, 
-        null, 
+        playerTarget,
+        this.enemies,
+        this.handlePlayerEnemyCollision,
+        null,
         this
       );
-      
+
       // Add overlap detection as a backup in case collider fails
       this.scene.physics.add.overlap(
         playerTarget,
@@ -59,8 +55,6 @@ export class EnemyManager {
         null,
         this
       );
-    } else {
-      console.error('[PROD DEBUG] No player found when setting up enemy collisions');
     }
   }
   
