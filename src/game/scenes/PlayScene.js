@@ -10,6 +10,8 @@ import { ScreenUtils } from '../utils/ScreenUtils';
 import { HealthBar } from '../ui/HealthBar';
 import { ScoreDisplay } from '../ui/ScoreDisplay';
 import { GameOverScreen } from '../ui/GameOverScreen';
+import { WeaponManager } from '../managers/WeaponManager';
+import { getHeroConfig } from '../config/heroes';
 
 export class PlayScene extends BaseScene {
   constructor(config) {
@@ -26,28 +28,12 @@ export class PlayScene extends BaseScene {
     this.collisionManager = null;
     this.effectsHelper = null;
     this.screenUtils = null;
-    
+    this.weaponManager = null;
+
     // UI elements
     this.healthBar = null;
     this.scoreDisplay = null;
     this.gameOverScreen = null;
-    
-    // Hero image mapping - maps hero IDs from selection to in-game sprites
-    this.heroImageMapping = {
-      male: {
-        mage1: '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png',
-        mage2: '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male2 60X60.png',
-        mage3: '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male3 64X64.png',
-        knight: null, // TBD
-        archer: null  // TBD
-      },
-      female: {
-        mage1: '/assets/WizardsInGameImages/Female/FinalPlayUse/Wizard Female1 60X60.png',
-        mage2: '/assets/WizardsInGameImages/Female/FinalPlayUse/Wizard Female2 60X60.png',
-        archer: '/assets/ArchersInGameImages/Female/FinalPlayUse/Archer Female 64X64.png',
-        knight: null  // TBD
-      }
-    };
   }
 
   /**
@@ -130,13 +116,19 @@ export class PlayScene extends BaseScene {
       // Initialize collision manager after player and enemy manager
       this.collisionManager = new CollisionManager(this, {
         playerDamageRate: 500,
-        enemyContactDamage: 5,
-        weaponDamage: 10
+        enemyContactDamage: 5
       });
-      
+
       // Setup collisions and enemy spawning
       if (this.player && this.player.sprite && this.enemyManager) {
         this.collisionManager.setup(this.player, this.enemyManager.enemies);
+
+        this.weaponManager = new WeaponManager(
+          this,
+          this.player,
+          this.enemyManager,
+          this.collisionManager
+        );
 
         // Start enemy spawning after collisions are set up
         this.enemyManager.startSpawning();
@@ -261,26 +253,11 @@ export class PlayScene extends BaseScene {
    * @returns {string} path to the hero image
    */
   getHeroImagePath() {
-    // Get hero gender and id from selection
-    const { gender, id } = this.selectedHero;
-    
-    // Get the image path from our mapping
-    const imagePath = this.heroImageMapping[gender]?.[id];
-    
-    // Return the image path or a default if not found
-    if (imagePath) {
-      return imagePath;
-    } else {
-      console.warn(`No image found for hero: ${id} with gender: ${gender}. Using default.`);
-      // Return first available image as fallback
-      const fallbackGender = gender || 'male';
-      const fallbackHeroMapping = this.heroImageMapping[fallbackGender];
-      const firstAvailableHero = Object.keys(fallbackHeroMapping).find(key => 
-        fallbackHeroMapping[key] !== null
-      );
-      
-      return fallbackHeroMapping[firstAvailableHero] || '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png';
-    }
+    const { id, gender } = this.selectedHero || {};
+    const heroConfig = getHeroConfig(id, gender);
+    if (heroConfig) return heroConfig.image;
+    console.warn(`PlayScene: no hero config for id="${id}" gender="${gender}" — using fallback`);
+    return '/assets/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png';
   }
 
   /**
@@ -477,6 +454,10 @@ export class PlayScene extends BaseScene {
       if (this.collisionManager) {
         this.collisionManager.update(time, delta);
       }
+
+      if (this.weaponManager) {
+        this.weaponManager.update(time, delta);
+      }
     } catch (error) {
       console.error('Error in update loop:', error);
     }
@@ -522,6 +503,7 @@ export class PlayScene extends BaseScene {
       if (this.inputManager) this.inputManager.destroy();
       if (this.levelManager) this.levelManager.destroy();
       if (this.enemyManager) this.enemyManager.destroy();
+      if (this.weaponManager) this.weaponManager.destroy();
       if (this.collisionManager) this.collisionManager.destroy();
       if (this.screenUtils) this.screenUtils.destroy();
       

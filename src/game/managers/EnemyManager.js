@@ -393,6 +393,7 @@ export class EnemyManager {
       this.updateEnemyHealthBar(enemySprite);
       
       if (enemySprite.currentHealth <= 0) {
+        enemySprite.active = false;
         // Use levelManager to add score instead of calling a non-existent addScore method
         if (this.scene.levelManager) {
           this.scene.levelManager.addScore(enemySprite.value || 10);

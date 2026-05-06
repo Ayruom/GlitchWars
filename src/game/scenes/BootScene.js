@@ -75,6 +75,8 @@ export class BootScene extends Phaser.Scene {
 
     // UI elements (with path adjustment)
     this.load.image("button", `${basePath}/button.png`);
+    this.load.image('arrow', `${basePath}/weapons/arrow.png`);
+    this.load.image('fireball', `${basePath}/weapons/fireball.png`);
   }
 
   create() {
@@ -110,6 +112,23 @@ export class BootScene extends Phaser.Scene {
     this.createPlaceholderIfMissing("wizard_female_1", 0xff00ff);
     this.createPlaceholderIfMissing("wizard_female_2", 0xff00ff);
     this.createPlaceholderIfMissing("archer_female", 0xff00ff);
+
+    if (!this.textures.exists('arrow')) {
+      const arrowGfx = this.make.graphics({ x: 0, y: 0, add: false });
+      arrowGfx.fillStyle(0xffff00);
+      arrowGfx.fillRect(0, 4, 16, 4);
+      arrowGfx.fillTriangle(14, 0, 14, 12, 20, 6);
+      arrowGfx.generateTexture('arrow', 20, 12);
+      arrowGfx.destroy();
+    }
+
+    if (!this.textures.exists('fireball')) {
+      const fireGfx = this.make.graphics({ x: 0, y: 0, add: false });
+      fireGfx.fillStyle(0xff6600);
+      fireGfx.fillCircle(8, 8, 8);
+      fireGfx.generateTexture('fireball', 16, 16);
+      fireGfx.destroy();
+    }
 
     this.scene.start("MenuScene");
   }
