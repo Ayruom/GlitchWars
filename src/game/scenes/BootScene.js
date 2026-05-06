@@ -7,11 +7,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    console.debug('[PROD DEBUG] BootScene preload started');
-    console.debug('[PROD DEBUG] Running in environment:', window.location.hostname);
-    console.debug('[PROD DEBUG] Base URL:', window.location.origin);
-    console.debug('[PROD DEBUG] Path:', window.location.pathname);
-    
     // Create loading bar
     const width = this.config.width;
     const height = this.config.height;
@@ -40,21 +35,9 @@ export class BootScene extends Phaser.Scene {
     });
 
     this.load.on("complete", () => {
-      console.debug('[PROD DEBUG] All assets loading complete');
       progressBar.destroy();
       progressBox.destroy();
       loadingText.destroy();
-    });
-
-    // Track loading errors
-    this.load.on("loaderror", (fileObj) => {
-      console.error("[PROD DEBUG] Failed to load asset:", fileObj.key, "from URL:", fileObj.url);
-      // We'll handle missing assets in the create method
-    });
-    
-    // Track successfully loaded assets
-    this.load.on("filecomplete", (key) => {
-      console.debug(`[PROD DEBUG] Successfully loaded asset: ${key}`);
     });
 
     // Check if we're in production (based on hostname)
@@ -66,22 +49,15 @@ export class BootScene extends Phaser.Scene {
     
     // For Netlify or similar hosting, we may need to adjust the path
     if (isProduction) {
-      console.debug('[PROD DEBUG] Using production asset paths');
       // Try to determine the base path from the current URL
       const pathParts = window.location.pathname.split('/');
       if (pathParts.length > 2) {
         // If we're in a subdirectory like /game/
         basePath = '.' + basePath;
-        console.debug('[PROD DEBUG] Adjusted base path:', basePath);
       }
     }
 
-    // Load all necessary game assets with debugging
-    console.debug('[PROD DEBUG] Loading background:', `${basePath}/scanline.png`);
     this.load.image("background", `${basePath}/scanline.png`);
-
-    // Debug what directories actually exist
-    console.debug('[PROD DEBUG] Document base URL:', document.baseURI);
 
     // Hero character sprites - Male (with path adjustment)
     this.load.image("wizard_male_1", `${basePath}/WizardsInGameImages/Male/FinalPlayUse/Wizard Male1 60X60.png`);

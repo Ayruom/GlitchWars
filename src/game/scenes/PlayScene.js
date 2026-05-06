@@ -72,27 +72,17 @@ export class PlayScene extends BaseScene {
       // Get the appropriate hero image path
       let heroImagePath = this.getHeroImagePath();
       
-      console.debug('[PROD DEBUG] Loading game assets');
-      console.debug('[PROD DEBUG] Loading hero image:', heroImagePath);
-      
       this.load.image(this.heroImageKey, heroImagePath);
       this.load.image(this.enemyLeftKey, 'assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40LeftFacing.png');
       this.load.image(this.enemyRightKey, 'assets/EnemiesInGameImages/FinalPlayUse/Enemy1 40X40rightFacing.png');
       
-      // Debug asset loading events
-      this.load.on('filecomplete', (key) => {
-        console.debug(`[PROD DEBUG] Asset loaded successfully: ${key}`);
-      });
-      
       this.load.on('loaderror', (fileObj) => {
-        console.error(`[PROD DEBUG] Error loading asset: ${fileObj.key} from ${fileObj.url}`);
         // Create fallback texture if enemy images fail to load
         if (fileObj.key === this.enemyLeftKey || fileObj.key === this.enemyRightKey) {
           this.createFallbackEnemyTextures(fileObj.key);
         }
       });
     } catch (error) {
-      console.error('[PROD DEBUG] Error in preload:', error);
     }
   }
 
@@ -101,8 +91,6 @@ export class PlayScene extends BaseScene {
    */
   create() {
     try {
-      console.debug('[PROD DEBUG] PlayScene.create started');
-      
       // Initialize utility classes
       this.screenUtils = new ScreenUtils(this);
       this.effectsHelper = new EffectsHelper(this);
@@ -148,16 +136,10 @@ export class PlayScene extends BaseScene {
       
       // Setup collisions and enemy spawning
       if (this.player && this.player.sprite && this.enemyManager) {
-        console.debug('[PROD DEBUG] Setting up collisions with player:', this.player);
         this.collisionManager.setup(this.player, this.enemyManager.enemies);
-        
+
         // Start enemy spawning after collisions are set up
         this.enemyManager.startSpawning();
-      } else {
-        console.error('[PROD DEBUG] Cannot setup collisions - player or enemyManager not initialized', {
-          player: this.player,
-          enemyManager: this.enemyManager
-        });
       }
       
       // Start difficulty timer at the end
@@ -169,7 +151,6 @@ export class PlayScene extends BaseScene {
       // Register screen resize event
       this.scale.on('resize', this.onScreenResize, this);
       
-      console.debug('[PROD DEBUG] PlayScene.create completed');
     } catch (error) {
       console.error('Error in PlayScene.create:', error);
       // Create minimal fallback UI to show something
@@ -206,7 +187,6 @@ export class PlayScene extends BaseScene {
       // Clear graphics
       graphics.clear();
       
-      console.debug(`[PROD DEBUG] Created fallback texture for ${key}`);
     } catch (error) {
       console.error(`Error creating fallback texture for ${key}:`, error);
     }
