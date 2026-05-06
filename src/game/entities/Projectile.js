@@ -19,7 +19,7 @@ export class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.setTexture(textureKey);
     this.setActive(true);
     this.setVisible(true);
-    this.enableBody(false, x, y, true, true);
+    this.enableBody(true, x, y, true, true);
     this.damage = damage;
     this._homingTarget = null;
     this._isHoming = false;

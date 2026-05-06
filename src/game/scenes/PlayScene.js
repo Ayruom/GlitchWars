@@ -185,28 +185,6 @@ export class PlayScene extends BaseScene {
   }
 
   /**
-   * Setup all game elements after player is created
-   */
-  setupGameElements() {
-    // Setup collision detection
-    this.collisionManager = new CollisionManager(this, {
-      playerDamageRate: 500,
-      enemyContactDamage: 5,
-      weaponDamage: 10
-    });
-    this.collisionManager.setup(this.player, this.enemyManager.enemies);
-    
-    // Start enemy spawning
-    this.enemyManager.startSpawning();
-    
-    // Start difficulty scaling
-    this.levelManager.startDifficultyTimer();
-    
-    // Register level up and score update callbacks
-    this.registerCallbacks();
-  }
-  
-  /**
    * Register callbacks for game events
    * @private
    */

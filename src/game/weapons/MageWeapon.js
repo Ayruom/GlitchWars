@@ -5,12 +5,12 @@ export class MageWeapon {
   constructor(scene, player, params = {}) {
     this.scene = scene;
     this.player = player;
-    this.damage = params.damage || 25;
-    this.projectileSpeed = params.speed || 300;
-    this.attacksPerSecond = params.attacksPerSecond || 1;
+    this.damage = params.damage ?? 25;
+    this.projectileSpeed = params.speed ?? 300;
+    this.attacksPerSecond = params.attacksPerSecond ?? 1;
     this.cooldownMs = 1000 / this.attacksPerSecond;
     this._elapsed = 0;
-    this.range = params.range || 600;
+    this.range = params.range ?? 600;
     this._overlapHandle = null;
 
     this.projectileGroup = scene.physics.add.group({

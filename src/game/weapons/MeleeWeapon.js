@@ -4,11 +4,11 @@ export class MeleeWeapon {
   constructor(scene, player, params = {}) {
     this.scene = scene;
     this.player = player;
-    this.damage = params.damage || 40;
-    this.attacksPerSecond = params.attacksPerSecond || 1;
+    this.damage = params.damage ?? 40;
+    this.attacksPerSecond = params.attacksPerSecond ?? 1;
     this.cooldownMs = 1000 / this.attacksPerSecond;
     this._elapsed = 0;
-    this.meleeRadius = params.meleeRadius || 80;
+    this.meleeRadius = params.meleeRadius ?? 80;
   }
 
   update(time, delta) {

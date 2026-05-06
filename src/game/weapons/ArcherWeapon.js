@@ -5,9 +5,9 @@ export class ArcherWeapon {
   constructor(scene, player, params = {}) {
     this.scene = scene;
     this.player = player;
-    this.damage = params.damage || 20;
-    this.projectileSpeed = params.speed || 400;
-    this.attacksPerSecond = params.attacksPerSecond || 1;
+    this.damage = params.damage ?? 20;
+    this.projectileSpeed = params.speed ?? 400;
+    this.attacksPerSecond = params.attacksPerSecond ?? 1;
     this.cooldownMs = 1000 / this.attacksPerSecond;
     this._elapsed = 0;
     this._overlapHandle = null;
@@ -33,7 +33,11 @@ export class ArcherWeapon {
     const ptr = this.scene.input.activePointer;
     let angle;
     if (ptr.worldX === 0 && ptr.worldY === 0) {
-      angle = 0;
+      const nearest = this._findNearestEnemy();
+      if (!nearest) return;
+      angle = Phaser.Math.RadToDeg(
+        Phaser.Math.Angle.Between(playerSprite.x, playerSprite.y, nearest.x, nearest.y)
+      );
     } else {
       angle = Phaser.Math.RadToDeg(
         Phaser.Math.Angle.Between(playerSprite.x, playerSprite.y, ptr.worldX, ptr.worldY)
@@ -44,6 +48,21 @@ export class ArcherWeapon {
     if (!projectile) return;
     projectile.reset(playerSprite.x, playerSprite.y, this.damage, 'arrow');
     projectile.fireDirectional(angle, this.projectileSpeed);
+  }
+
+  _findNearestEnemy() {
+    if (!this.scene.enemyManager || !this.scene.enemyManager.enemies) return null;
+    const playerSprite = this.player.sprite;
+    const children = this.scene.enemyManager.enemies.getChildren();
+    let nearest = null;
+    let nearestDistSq = Infinity;
+    for (let i = 0; i < children.length; i++) {
+      const enemy = children[i];
+      if (!enemy.active) continue;
+      const distSq = Phaser.Math.Distance.Squared(playerSprite.x, playerSprite.y, enemy.x, enemy.y);
+      if (distSq < nearestDistSq) { nearestDistSq = distSq; nearest = enemy; }
+    }
+    return nearest;
   }
 
   registerCollisions(collisionManager, enemyGroup) {
