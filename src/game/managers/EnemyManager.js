@@ -185,9 +185,7 @@ export class EnemyManager {
       const LEVEL_HEALTH_STEP = 2;
       const maxHealth = (HEALTH_PER_WAVE * this.wave) + (LEVEL_HEALTH_STEP * (this.level - 1));
       
-      // Enhanced enemy properties scaling
-      const speedScaling = 1 + (this.wave * 0.1) + (this.level * 0.05);
-      const baseSpeed = this.enemyBaseSpeed * speedScaling * (0.8 + Math.random() * 0.4);
+      const baseSpeed = this.enemyBaseSpeed;
       const damage = 5 + Math.floor(this.wave * 1.5) + Math.floor(this.level * 0.5);
       const value = 10 + Math.floor(this.wave * 2);
       
@@ -555,7 +553,7 @@ export class EnemyManager {
     
     // Update enemy properties based on difficulty
     // enemyBaseHealth is NOT updated here — health is computed fresh in spawnEnemy to avoid double-scaling
-    this.enemyBaseSpeed = Math.min(200, 100 + (wave * 5) + (level * 2));
+    // enemyBaseSpeed is intentionally not scaled — speed is constant across all waves (100 px/s)
   }
   
   /**
