@@ -131,7 +131,7 @@ export class PlayScene extends BaseScene {
         );
 
         // Start enemy spawning after collisions are set up
-        this.enemyManager.startSpawning();
+        this.enemyManager.startWave(1);
       }
       
       // Start difficulty timer at the end
@@ -214,6 +214,12 @@ export class PlayScene extends BaseScene {
       }
     });
     
+    this.enemyManager.onWaveComplete((completedWave) => {
+      const nextWave = completedWave + 1;
+      this.levelManager.advanceWave(nextWave);
+      this.enemyManager.startWave(nextWave);
+    });
+
     this.levelManager.onScoreUpdate((score) => {
       this.scoreDisplay.updateScore(score);
     });

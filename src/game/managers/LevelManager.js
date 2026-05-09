@@ -96,39 +96,35 @@ export class LevelManager {
    */
   levelUp() {
     this.level++;
-    
+
     // Notify callbacks
     this.notifyLevelUpCallbacks();
-    
-    // Increase wave after certain levels
-    if (this.level % 5 === 0) {
-      this.wave++;
 
-      // Immediately sync EnemyManager so spawn health reflects the new wave without waiting for the 10s difficulty timer
-      this.scene.enemyManager?.updateDifficulty(this.level, this.wave);
-
-      // Notify wave change callbacks
-      this.notifyWaveChangeCallbacks();
-      
-      // Limited health increase with cap
-      const prevMaxHealth = this.playerMaxHealth;
-      this.playerMaxHealth = Math.min(this.maxHealthCap, this.playerMaxHealth + this.healthIncreaseAmount);
-      
-      // Small heal on wave completion
-      const healAmount = this.playerMaxHealth * 0.2;
-      this.playerCurrentHealth = Math.min(
-        this.playerMaxHealth,
-        this.playerCurrentHealth + healAmount
-      );
-    }
-    
     // Slower player speed increase
     this.playerSpeed = Math.min(300, (this.playerSpeed || 200) + 5);
-    
+
     // Increase enemy spawn rate and damage with each level
     this.enemySpawnRate = Math.max(500, this.enemySpawnRate - 50);
     this.enemyContactDamage = Math.min(20, (this.enemyContactDamage || 5) + 1);
-    
+
+    return this;
+  }
+
+  advanceWave(newWave) {
+    this.wave = newWave;
+
+    this.scene.enemyManager?.updateDifficulty(this.level, this.wave);
+
+    this.playerMaxHealth = Math.min(this.maxHealthCap, this.playerMaxHealth + this.healthIncreaseAmount);
+
+    const healAmount = this.playerMaxHealth * 0.2;
+    this.playerCurrentHealth = Math.min(
+      this.playerMaxHealth,
+      this.playerCurrentHealth + healAmount
+    );
+
+    this.notifyWaveChangeCallbacks();
+
     return this;
   }
   
