@@ -35,7 +35,8 @@ export class Enemy {
       this.sprite.baseSpeed = this.speed;
       this.sprite.damage = this.damage;
       this.sprite.value = this.value;
-      
+      this.sprite.spawnTime = scene.time.now;
+
       // Create health bar for this enemy
       this.createHealthBar();
     } catch (error) {
@@ -73,7 +74,8 @@ export class Enemy {
       this.sprite.baseSpeed = this.speed;
       this.sprite.damage = this.damage;
       this.sprite.value = this.value;
-      
+      this.sprite.spawnTime = this.scene.time.now;
+
       // Create health bar
       this.createHealthBar();
     } catch (error) {

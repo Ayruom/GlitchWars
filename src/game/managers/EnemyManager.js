@@ -3,6 +3,11 @@ import Phaser from 'phaser';
 import { Enemy } from '../entities/Enemy';
 
 export class EnemyManager {
+  static RAMP_DURATION_MS = 1500;
+  static RAMP_START_FRACTION = 0.35;
+  static SEPARATION_RADIUS = 60;
+  static SEPARATION_STRENGTH = 0.8;
+
   constructor(scene) {
     this.scene = scene;
 
@@ -293,15 +298,33 @@ export class EnemyManager {
         }
       }
       
-      // Dynamic speed based on distance (faster when further away)
+      // Ramp speed from RAMP_START_FRACTION up to full over RAMP_DURATION_MS
       const baseSpeed = enemySprite.baseSpeed || this.enemyBaseSpeed;
-      const minSpeed = baseSpeed * 0.5;
-      const maxSpeed = baseSpeed * 1.2;
-      const speedFactor = Math.min(1, Math.max(0.5, distance / 300));
-      const speed = minSpeed + (maxSpeed - minSpeed) * speedFactor;
-      
-      // Move towards player
-      this.scene.physics.moveToObject(enemySprite, player, speed);
+      const elapsed = this.scene.time.now - (enemySprite.spawnTime || this.scene.time.now);
+      const rampT = Math.min(1, elapsed / EnemyManager.RAMP_DURATION_MS);
+      const rampMultiplier = EnemyManager.RAMP_START_FRACTION + (1 - EnemyManager.RAMP_START_FRACTION) * rampT;
+      const speed = baseSpeed * rampMultiplier;
+
+      const dx = player.x - enemySprite.x;
+      const dy = player.y - enemySprite.y;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      let vx = (dx / len) * speed;
+      let vy = (dy / len) * speed;
+
+      this.enemies.getChildren().forEach((other) => {
+        if (other === enemySprite || !other.active) return;
+        const sx = enemySprite.x - other.x;
+        const sy = enemySprite.y - other.y;
+        const dist = Math.sqrt(sx * sx + sy * sy) || 1;
+        if (dist < EnemyManager.SEPARATION_RADIUS) {
+          const push = (EnemyManager.SEPARATION_RADIUS - dist) / EnemyManager.SEPARATION_RADIUS;
+          vx += (sx / dist) * push * EnemyManager.SEPARATION_STRENGTH * speed;
+          vy += (sy / dist) * push * EnemyManager.SEPARATION_STRENGTH * speed;
+        }
+      });
+
+      const finalLen = Math.sqrt(vx * vx + vy * vy) || 1;
+      enemySprite.body.setVelocity((vx / finalLen) * speed, (vy / finalLen) * speed);
     } catch (error) {
       console.error('Error updating enemy movement:', error);
     }
