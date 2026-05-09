@@ -8,7 +8,7 @@ export class EnemyManager {
     
     // Enemy properties
     this.enemies = null;
-    this.enemyBaseHealth = scene.enemyBaseHealth || 100;
+    this.enemyBaseHealth = 40; // Wave 1 minimum per the health formula (40 × wave)
     this.enemySpawnRate = scene.enemySpawnRate || 2000; // ms
     this.enemyBaseSpeed = scene.enemyBaseSpeed || 100;
     this.maxEnemies = scene.maxEnemies || 50;
@@ -143,10 +143,10 @@ export class EnemyManager {
           break;
       }
       
-      // Enhanced enemy scaling with wave and level
-      const waveScaling = this.wave * 8;
-      const levelScaling = this.level * 3;
-      const maxHealth = this.enemyBaseHealth + waveScaling + levelScaling;
+      // Health formula: Wave 1 = 40 HP (2 Archer hits), scales linearly per wave
+      const HEALTH_PER_WAVE = 40;
+      const LEVEL_HEALTH_STEP = 2;
+      const maxHealth = (HEALTH_PER_WAVE * this.wave) + (LEVEL_HEALTH_STEP * (this.level - 1));
       
       // Enhanced enemy properties scaling
       const speedScaling = 1 + (this.wave * 0.1) + (this.level * 0.05);
@@ -486,7 +486,7 @@ export class EnemyManager {
     this.wave = wave;
     
     // Update enemy properties based on difficulty
-    this.enemyBaseHealth = 100 + (wave * 8) + (level * 3);
+    // enemyBaseHealth is NOT updated here — health is computed fresh in spawnEnemy to avoid double-scaling
     this.enemyBaseSpeed = Math.min(200, 100 + (wave * 5) + (level * 2));
   }
   
