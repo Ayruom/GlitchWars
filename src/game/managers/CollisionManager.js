@@ -21,8 +21,7 @@ export class CollisionManager {
     this.playerDamageRate = config.playerDamageRate || 500; // ms between damage ticks
     this.lastPlayerDamageTime = 0;
     this.enemyContactDamage = config.enemyContactDamage || 5;
-    this.weaponDamage = config.weaponDamage || 10;
-    
+
     // Flag for active state
     this.active = false;
   }
@@ -113,7 +112,7 @@ export class CollisionManager {
    * @param {number} damage - Damage amount
    * @returns {boolean} - True if enemy was destroyed
    */
-  damageEnemy(enemy, damage = this.weaponDamage) {
+  damageEnemy(enemy, damage = 10) {
     if (!enemy || !enemy.active) {
       return false;
     }
@@ -192,7 +191,17 @@ export class CollisionManager {
       this.playerEnemyCollider.active = true;
     }
   }
-  
+
+  registerOverlap(groupA, groupB, callback, context) {
+    return this.scene.physics.add.overlap(groupA, groupB, callback, null, context);
+  }
+
+  unregisterOverlap(handle) {
+    if (handle) {
+      this.scene.physics.world.removeCollider(handle);
+    }
+  }
+
   /**
    * Clean up resources
    */
