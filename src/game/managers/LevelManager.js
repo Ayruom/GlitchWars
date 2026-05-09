@@ -104,7 +104,10 @@ export class LevelManager {
     // Increase wave after certain levels
     if (this.level % 5 === 0) {
       this.wave++;
-      
+
+      // Immediately sync EnemyManager so spawn health reflects the new wave without waiting for the 10s difficulty timer
+      this.scene.enemyManager?.updateDifficulty(this.level, this.wave);
+
       // Notify wave change callbacks
       this.notifyWaveChangeCallbacks();
       
