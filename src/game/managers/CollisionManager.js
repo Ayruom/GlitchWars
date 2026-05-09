@@ -157,9 +157,13 @@ export class CollisionManager {
       const basePoints = enemy.points || 10;
       this.scene.levelManager.addScore(basePoints);
     }
-    
-    // Destroy the enemy sprite
-    enemy.destroy();
+
+    // Route through EnemyManager so the wave kill counter is incremented
+    if (this.scene.enemyManager) {
+      this.scene.enemyManager.destroyEnemy(enemy);
+    } else {
+      enemy.destroy();
+    }
   }
   
   /**

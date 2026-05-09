@@ -5,22 +5,32 @@ import { Enemy } from '../entities/Enemy';
 export class EnemyManager {
   constructor(scene) {
     this.scene = scene;
-    
+
     // Enemy properties
     this.enemies = null;
     this.enemyBaseHealth = 40; // Wave 1 minimum per the health formula (40 × wave)
     this.enemySpawnRate = scene.enemySpawnRate || 2000; // ms
     this.enemyBaseSpeed = scene.enemyBaseSpeed || 100;
     this.maxEnemies = scene.maxEnemies || 50;
-    
+
     // Game level properties for scaling
     this.level = scene.level || 1;
     this.wave = scene.wave || 1;
-    
+
+    // Wave lifecycle state
+    this.wavePhase = 'SPAWNING'; // SPAWNING | DRAINING | COMPLETE
+    this.enemiesPerWave = 10 + (2 * this.wave);
+    this.enemiesSpawnedThisWave = 0;
+    this.enemiesKilledThisWave = 0;
+    this.onWaveCompleteCallback = null;
+
+    // Prevents onWaveComplete from firing during scene teardown
+    this.active = true;
+
     // Sprite keys
     this.enemyLeftKey = 'enemyLeft';
     this.enemyRightKey = 'enemyRight';
-    
+
     // Setup enemy group
     this.setupEnemies();
   }
@@ -61,19 +71,27 @@ export class EnemyManager {
   /**
    * Start spawning enemies at a specified rate
    */
-  startSpawning() {
-    // Clear any existing timer
+  startWave(wave) {
+    this.wave = wave;
+    this.wavePhase = 'SPAWNING';
+    this.enemiesPerWave = 10 + (2 * this.wave);
+    this.enemiesSpawnedThisWave = 0;
+    this.enemiesKilledThisWave = 0;
+
     if (this.enemySpawnTimer) {
       this.enemySpawnTimer.remove();
     }
-    
-    // Start spawning enemies
+
     this.enemySpawnTimer = this.scene.time.addEvent({
       delay: this.enemySpawnRate,
       callback: this.spawnEnemy,
       callbackScope: this,
       loop: true
     });
+  }
+
+  startSpawning() {
+    this.startWave(this.wave);
   }
   
   /**
@@ -86,6 +104,10 @@ export class EnemyManager {
     }
   }
   
+  onWaveComplete(callback) {
+    this.onWaveCompleteCallback = callback;
+  }
+
   /**
    * Update the spawn rate (typically based on difficulty)
    * @param {number} newRate - New spawn rate in milliseconds
@@ -105,12 +127,22 @@ export class EnemyManager {
   spawnEnemy() {
     try {
       if (!this.enemies || !this.scene.player || !this.scene.player.sprite) return;
-      
+
+      if (this.wavePhase !== 'SPAWNING') return;
+
       // Limit maximum number of enemies for performance
       if (this.enemies.getChildren().length >= this.maxEnemies) {
         return;
       }
-      
+
+      if (this.enemiesSpawnedThisWave >= this.enemiesPerWave) {
+        this.wavePhase = 'DRAINING';
+        this.stopSpawning();
+        return;
+      }
+
+      this.enemiesSpawnedThisWave++;
+
       // Randomly spawn enemies outside the visible area
       const side = Math.floor(Math.random() * 4);
       const buffer = 40;
@@ -394,7 +426,6 @@ export class EnemyManager {
       
       if (enemySprite.currentHealth <= 0) {
         enemySprite.active = false;
-        // Use levelManager to add score instead of calling a non-existent addScore method
         if (this.scene.levelManager) {
           this.scene.levelManager.addScore(enemySprite.value || 10);
         } else {
@@ -417,7 +448,21 @@ export class EnemyManager {
       // Clean up health bars
       if (enemySprite.healthBar) enemySprite.healthBar.destroy();
       if (enemySprite.healthBarBg) enemySprite.healthBarBg.destroy();
-      
+
+      // Count every removal (kill or offscreen) toward wave completion
+      this.enemiesKilledThisWave++;
+      if (
+        this.active &&
+        this.scene.sys.isActive() &&
+        this.wavePhase === 'DRAINING' &&
+        this.enemiesKilledThisWave >= this.enemiesPerWave
+      ) {
+        this.wavePhase = 'COMPLETE';
+        if (typeof this.onWaveCompleteCallback === 'function') {
+          this.onWaveCompleteCallback(this.wave);
+        }
+      }
+
       // Random destruction effect
       const effectType = Phaser.Math.Between(1, 3);
       switch (effectType) {
@@ -502,6 +547,7 @@ export class EnemyManager {
    * Clean up resources before scene shutdown
    */
   destroy() {
+    this.active = false;
     this.stopSpawning();
     this.clearAllEnemies();
   }
