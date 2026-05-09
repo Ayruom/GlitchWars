@@ -31,7 +31,6 @@ export class LevelManager {
     // Difficulty settings
     this.enemySpawnRate = config.enemySpawnRate || 2000;
     this.enemyBaseSpeed = config.enemyBaseSpeed || 100;
-    this.enemyBaseHealth = config.enemyBaseHealth || 100;
     this.difficultyIncreaseInterval = config.difficultyIncreaseInterval || 10000;
     
     // Register callbacks
@@ -222,7 +221,7 @@ export class LevelManager {
       wave: this.wave,
       enemySpawnRate: this.enemySpawnRate,
       enemyBaseSpeed: this.enemyBaseSpeed,
-      enemyBaseHealth: this.enemyBaseHealth,
+
       enemyContactDamage: this.enemyContactDamage
     };
   }
