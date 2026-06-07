@@ -83,6 +83,166 @@ button:focus-visible {
   box-shadow: 0 0 8px #fff700;
 }
 
+/* 🟢 Glitch "Start Game" Button — adapted from Uiverse.io by Galahhad to match the retro pixel theme */
+.ui-btn {
+  --btn-default-bg: #000;
+  --btn-padding: 0.9em 1.8em;
+  --btn-hover-bg: rgba(0, 255, 255, 0.12);
+  --btn-transition: .3s;
+  --btn-letter-spacing: .15rem;
+  --btn-animation-duration: 1.2s;
+  --btn-shadow-color: rgba(0, 255, 255, 0.35);
+  --btn-shadow: 0 0 12px 0 var(--btn-shadow-color);
+  --hover-btn-color: #ff00ff;
+  --default-btn-color: #0ff;
+  --font-size: 0.75rem;
+  --font-weight: 400;
+  --font-family: 'Press Start 2P', Menlo, Roboto Mono, monospace;
+}
+
+.ui-btn {
+  box-sizing: border-box;
+  padding: var(--btn-padding);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--default-btn-color);
+  font: var(--font-weight) var(--font-size) var(--font-family);
+  background: var(--btn-default-bg);
+  border: 4px dashed var(--default-btn-color);
+  cursor: pointer;
+  transition: var(--btn-transition);
+  overflow: hidden;
+  box-shadow: var(--btn-shadow);
+}
+
+.ui-btn span {
+  letter-spacing: var(--btn-letter-spacing);
+  transition: var(--btn-transition);
+  box-sizing: border-box;
+  position: relative;
+  background: inherit;
+}
+
+.ui-btn span::before {
+  box-sizing: border-box;
+  position: absolute;
+  content: "";
+  background: inherit;
+}
+
+.ui-btn:hover,
+.ui-btn:focus {
+  background: var(--btn-hover-bg);
+  border-color: var(--hover-btn-color);
+  box-shadow: 0 0 18px var(--hover-btn-color);
+}
+
+.ui-btn:hover span,
+.ui-btn:focus span {
+  color: var(--hover-btn-color);
+}
+
+.ui-btn:hover span::before,
+.ui-btn:focus span::before {
+  animation: chitchat linear both var(--btn-animation-duration);
+}
+
+@keyframes chitchat {
+  0% {
+    content: "#";
+  }
+
+  5% {
+    content: ".";
+  }
+
+  10% {
+    content: "^{";
+  }
+
+  15% {
+    content: "-!";
+  }
+
+  20% {
+    content: "#$_";
+  }
+
+  25% {
+    content: "№:0";
+  }
+
+  30% {
+    content: "#{+.";
+  }
+
+  35% {
+    content: "@}-?";
+  }
+
+  40% {
+    content: "?{4@%";
+  }
+
+  45% {
+    content: "=.,^!";
+  }
+
+  50% {
+    content: "?2@%";
+  }
+
+  55% {
+    content: "\;1}]";
+  }
+
+  60% {
+    content: "?{%:%";
+    right: 0;
+  }
+
+  65% {
+    content: "|{f[4";
+    right: 0;
+  }
+
+  70% {
+    content: "{4%0%";
+    right: 0;
+  }
+
+  75% {
+    content: "'1_0<";
+    right: 0;
+  }
+
+  80% {
+    content: "{0%";
+    right: 0;
+  }
+
+  85% {
+    content: "]>'";
+    right: 0;
+  }
+
+  90% {
+    content: "4";
+    right: 0;
+  }
+
+  95% {
+    content: "2";
+    right: 0;
+  }
+
+  100% {
+    content: "";
+    right: 0;
+  }
+}
+
 /* 🌗 Optional Light Mode — not used by default */
 @media (prefers-color-scheme: light) {
   :root {

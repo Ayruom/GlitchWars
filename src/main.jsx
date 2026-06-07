@@ -7,8 +7,6 @@ import { MainLayout } from './components/MainLayout';
 import { HeroSection } from './components/HeroSection';
 import { GenderSelectionComponent } from './components/GenderSelectionComponent';
 import { HeroSelectionComponent } from './components/HeroSelectionComponent';
-import { GameFeaturesSection } from './components/GameFeaturesSection';
-import { PixelLootSection } from './components/PixelLootSection';
 import { Game } from './components/Game';
 
 const router = createBrowserRouter([
@@ -18,13 +16,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: (
-          <>
-            <HeroSection />
-            <GameFeaturesSection />
-            <PixelLootSection />
-          </>
-        ),
+        element: <HeroSection />,
       },
       {
         path: 'select-gender',
