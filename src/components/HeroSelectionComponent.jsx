@@ -122,7 +122,7 @@ export function HeroSelectionComponent() {
             onClick={() => navigate('/select-gender')}
             className="px-6 py-2 font-pixel text-cyan-400 border border-cyan-400 hover:bg-cyan-900/30 hover:text-cyan-300 transition-all duration-300"
           >
-            ← BACK
+            <span>← BACK</span>
           </button>
         </div>
 
@@ -182,7 +182,7 @@ export function HeroSelectionComponent() {
             onClick={startGame}
             className="font-pixel px-8 py-3 text-lg border-2 border-green-600 text-green-400 hover:bg-green-900/30 hover:text-green-300 hover:border-green-400 transition-all duration-300 mb-6"
           >
-            PLAY AS {selectedHero.name.toUpperCase()}
+            <span>PLAY AS {selectedHero.name.toUpperCase()}</span>
           </button>
         )}
       </div>

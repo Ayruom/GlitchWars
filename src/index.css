@@ -90,7 +90,7 @@ button:focus-visible {
   --btn-hover-bg: rgba(0, 255, 255, 0.12);
   --btn-transition: .3s;
   --btn-letter-spacing: .15rem;
-  --btn-animation-duration: 1.2s;
+  --btn-animation-duration: 2.5s;
   --btn-shadow-color: rgba(0, 255, 255, 0.35);
   --btn-shadow: 0 0 12px 0 var(--btn-shadow-color);
   --hover-btn-color: #ff00ff;
@@ -116,19 +116,31 @@ button:focus-visible {
   box-shadow: var(--btn-shadow);
 }
 
+/* 🌀 Glitch text-scramble hover effect — applies to ANY button (current & future)
+   that wraps its label in a <span>, so every clickable button shares this feature */
+button span {
+  display: inline-block;
+  position: relative;
+  box-sizing: border-box;
+  background: inherit;
+  transition: var(--btn-transition, .3s);
+}
+
 .ui-btn span {
   letter-spacing: var(--btn-letter-spacing);
-  transition: var(--btn-transition);
+}
+
+button span::before {
   box-sizing: border-box;
-  position: relative;
+  position: absolute;
+  inset: 0;
+  content: "";
   background: inherit;
 }
 
-.ui-btn span::before {
-  box-sizing: border-box;
-  position: absolute;
-  content: "";
-  background: inherit;
+button:hover span::before,
+button:focus span::before {
+  animation: chitchat linear both var(--btn-animation-duration, 2.5s);
 }
 
 .ui-btn:hover,
@@ -141,11 +153,6 @@ button:focus-visible {
 .ui-btn:hover span,
 .ui-btn:focus span {
   color: var(--hover-btn-color);
-}
-
-.ui-btn:hover span::before,
-.ui-btn:focus span::before {
-  animation: chitchat linear both var(--btn-animation-duration);
 }
 
 @keyframes chitchat {
