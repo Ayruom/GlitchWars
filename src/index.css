@@ -83,6 +83,189 @@ button:focus-visible {
   box-shadow: 0 0 8px #fff700;
 }
 
+/* 🟢 Glitch "Start Game" Button — adapted from Uiverse.io by Galahhad to match the retro pixel theme */
+.ui-btn {
+  --btn-default-bg: #000;
+  --btn-padding: 0.9em 1.8em;
+  --btn-hover-bg: rgba(0, 255, 255, 0.12);
+  --btn-transition: .3s;
+  --btn-letter-spacing: .15rem;
+  --btn-animation-duration: 2.5s;
+  --btn-glitch-stagger: 0.045s;
+  --btn-shadow-color: rgba(0, 255, 255, 0.35);
+  --btn-shadow: 0 0 12px 0 var(--btn-shadow-color);
+  --hover-btn-color: #ff00ff;
+  --default-btn-color: #0ff;
+  --font-size: 0.75rem;
+  --font-weight: 400;
+  --font-family: 'Press Start 2P', Menlo, Roboto Mono, monospace;
+}
+
+.ui-btn {
+  box-sizing: border-box;
+  padding: var(--btn-padding);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--default-btn-color);
+  font: var(--font-weight) var(--font-size) var(--font-family);
+  background: var(--btn-default-bg);
+  border: 4px dashed var(--default-btn-color);
+  cursor: pointer;
+  transition: var(--btn-transition);
+  overflow: hidden;
+  box-shadow: var(--btn-shadow);
+}
+
+/* 🌀 Glitch text-scramble hover effect — applies to ANY button (current & future)
+   whose label is wrapped in <GlitchLabel>, so every clickable button shares this
+   feature. GlitchLabel splits the label into one <span> per character, each tagged
+   with a --char-index custom property. The scramble overlay (::before) is sized to
+   that single character's box and its animation-delay is offset by --char-index, so
+   the glitch ripples letter-by-letter across the word — this scales to ANY label
+   length/button size automatically, unlike a single overlay sized to the whole label
+   (which only lined up for words matching the scramble string's fixed length). The
+   overlay has a transparent background and its own glitch color, layered directly
+   over the real letter, which stays visible the whole time. */
+.glitch-label {
+  display: inline-flex;
+  position: relative;
+  box-sizing: border-box;
+  transition: var(--btn-transition, .3s);
+}
+
+.ui-btn .glitch-label {
+  letter-spacing: var(--btn-letter-spacing);
+}
+
+.glitch-label > span {
+  display: inline-block;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.glitch-label > span::before {
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  content: "";
+  color: var(--hover-btn-color, #ff00ff);
+  pointer-events: none;
+}
+
+button:hover .glitch-label > span::before,
+button:focus .glitch-label > span::before {
+  animation: chitchat linear both var(--btn-animation-duration, 2.5s);
+  animation-delay: calc(var(--char-index, 0) * var(--btn-glitch-stagger, 0.045s));
+}
+
+.ui-btn:hover,
+.ui-btn:focus {
+  background: var(--btn-hover-bg);
+  border-color: var(--hover-btn-color);
+  box-shadow: 0 0 18px var(--hover-btn-color);
+}
+
+.ui-btn:hover .glitch-label,
+.ui-btn:focus .glitch-label {
+  color: var(--hover-btn-color);
+}
+
+@keyframes chitchat {
+  0% {
+    content: "#";
+  }
+
+  5% {
+    content: ".";
+  }
+
+  10% {
+    content: "^{";
+  }
+
+  15% {
+    content: "-!";
+  }
+
+  20% {
+    content: "#$_";
+  }
+
+  25% {
+    content: "№:0";
+  }
+
+  30% {
+    content: "#{+.";
+  }
+
+  35% {
+    content: "@}-?";
+  }
+
+  40% {
+    content: "?{4@%";
+  }
+
+  45% {
+    content: "=.,^!";
+  }
+
+  50% {
+    content: "?2@%";
+  }
+
+  55% {
+    content: "\;1}]";
+  }
+
+  60% {
+    content: "?{%:%";
+    right: 0;
+  }
+
+  65% {
+    content: "|{f[4";
+    right: 0;
+  }
+
+  70% {
+    content: "{4%0%";
+    right: 0;
+  }
+
+  75% {
+    content: "'1_0<";
+    right: 0;
+  }
+
+  80% {
+    content: "{0%";
+    right: 0;
+  }
+
+  85% {
+    content: "]>'";
+    right: 0;
+  }
+
+  90% {
+    content: "4";
+    right: 0;
+  }
+
+  95% {
+    content: "2";
+    right: 0;
+  }
+
+  100% {
+    content: "";
+    right: 0;
+  }
+}
+
 /* 🌗 Optional Light Mode — not used by default */
 @media (prefers-color-scheme: light) {
   :root {

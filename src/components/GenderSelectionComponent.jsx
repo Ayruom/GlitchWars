@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { GlitchLabel } from './GlitchLabel';
 
 export function GenderSelectionComponent() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export function GenderSelectionComponent() {
             onClick={() => navigate('/')}
             className="px-6 py-2 font-pixel text-green-400 border-2 border-green-500 hover:bg-green-900/30 hover:text-green-300 transition-all duration-300"
           >
-            ← BACK
+            <GlitchLabel text="← BACK" />
           </button>
         </div>
 
@@ -98,7 +99,7 @@ export function GenderSelectionComponent() {
                 : 'border-pink-600 text-pink-400 hover:bg-pink-900/30 hover:text-pink-300 hover:border-pink-400'
           }`}
         >
-          {selectedGender ? `CONTINUE AS ${selectedGender.label.toUpperCase()}` : 'SELECT GENDER TO CONTINUE'}
+          <GlitchLabel text={selectedGender ? `CONTINUE AS ${selectedGender.label.toUpperCase()}` : 'SELECT GENDER TO CONTINUE'} />
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 // src/components/HeroSection.jsx
 import { useNavigate } from 'react-router-dom';
+import { GlitchLabel } from './GlitchLabel';
 
 export function HeroSection() {
   const navigate = useNavigate();
@@ -9,13 +10,12 @@ export function HeroSection() {
   };
 
   return (
-    <section className="text-center py-20">
-      <h1 className="text-4xl mb-4">Welcome to Glitch Wars</h1>
-      <button
-        onClick={handleStartGame}
-        className="px-6 py-3 font-pixel bg-pink-600 text-white rounded-md transition-all duration-300 ease-in-out hover:scale-110 hover:shadow-[0_0_15px_rgba(255,105,180,0.8)] hover:animate-bounce"
-      >
-        START GAME
+    <section className="flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center gap-10 px-4 text-center">
+      <h1 className="text-2xl sm:text-4xl tracking-wider animate-flicker">
+        Welcome to Glitch Wars
+      </h1>
+      <button onClick={handleStartGame} className="ui-btn">
+        <GlitchLabel text="Start Game" />
       </button>
     </section>
   );
