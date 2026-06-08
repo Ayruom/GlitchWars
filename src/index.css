@@ -91,6 +91,7 @@ button:focus-visible {
   --btn-transition: .3s;
   --btn-letter-spacing: .15rem;
   --btn-animation-duration: 2.5s;
+  --btn-glitch-stagger: 0.045s;
   --btn-shadow-color: rgba(0, 255, 255, 0.35);
   --btn-shadow: 0 0 12px 0 var(--btn-shadow-color);
   --hover-btn-color: #ff00ff;
@@ -117,22 +118,33 @@ button:focus-visible {
 }
 
 /* 🌀 Glitch text-scramble hover effect — applies to ANY button (current & future)
-   that wraps its label in a <span>, so every clickable button shares this feature.
-   The scrambled characters render in an overlay with a transparent background and
-   their own glitch color, layered directly over the label — the real text underneath
-   stays visible the whole time, before, during and after the animation. */
-button span {
-  display: inline-block;
+   whose label is wrapped in <GlitchLabel>, so every clickable button shares this
+   feature. GlitchLabel splits the label into one <span> per character, each tagged
+   with a --char-index custom property. The scramble overlay (::before) is sized to
+   that single character's box and its animation-delay is offset by --char-index, so
+   the glitch ripples letter-by-letter across the word — this scales to ANY label
+   length/button size automatically, unlike a single overlay sized to the whole label
+   (which only lined up for words matching the scramble string's fixed length). The
+   overlay has a transparent background and its own glitch color, layered directly
+   over the real letter, which stays visible the whole time. */
+.glitch-label {
+  display: inline-flex;
   position: relative;
   box-sizing: border-box;
   transition: var(--btn-transition, .3s);
 }
 
-.ui-btn span {
+.ui-btn .glitch-label {
   letter-spacing: var(--btn-letter-spacing);
 }
 
-button span::before {
+.glitch-label > span {
+  display: inline-block;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.glitch-label > span::before {
   box-sizing: border-box;
   position: absolute;
   inset: 0;
@@ -141,9 +153,10 @@ button span::before {
   pointer-events: none;
 }
 
-button:hover span::before,
-button:focus span::before {
+button:hover .glitch-label > span::before,
+button:focus .glitch-label > span::before {
   animation: chitchat linear both var(--btn-animation-duration, 2.5s);
+  animation-delay: calc(var(--char-index, 0) * var(--btn-glitch-stagger, 0.045s));
 }
 
 .ui-btn:hover,
@@ -153,8 +166,8 @@ button:focus span::before {
   box-shadow: 0 0 18px var(--hover-btn-color);
 }
 
-.ui-btn:hover span,
-.ui-btn:focus span {
+.ui-btn:hover .glitch-label,
+.ui-btn:focus .glitch-label {
   color: var(--hover-btn-color);
 }
 

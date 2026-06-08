@@ -1,5 +1,6 @@
 // src/components/HeroSection.jsx
 import { useNavigate } from 'react-router-dom';
+import { GlitchLabel } from './GlitchLabel';
 
 export function HeroSection() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export function HeroSection() {
         Welcome to Glitch Wars
       </h1>
       <button onClick={handleStartGame} className="ui-btn">
-        <span>Start Game</span>
+        <GlitchLabel text="Start Game" />
       </button>
     </section>
   );
